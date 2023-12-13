@@ -1,6 +1,6 @@
 # kFastML
 
-Goal: One line command for YAML --> Inference Sever build, docker image-gen and k8s deployment. 
+Goal: One line command for YAML --> Inference Sever generation, docker image build and k8s deployment. 
 
 ### Architecture:
 
