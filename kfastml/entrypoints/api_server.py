@@ -19,7 +19,7 @@ async def cleanup_images(request: Request):
         'images': request_dict.pop('image_urls')
     }
 
-    job_result = inference_engine.enqueueJob(request_id, request_params)
+    job_result = inference_engine.enqueue(request_id, request_params)
 
     job_result = await job_result
     assert job_result is list
