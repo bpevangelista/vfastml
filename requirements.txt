@@ -1,5 +1,6 @@
 fastapi
 gunicorn
+pyzmq
 torch
 transformers
 uvicorn[standard]
