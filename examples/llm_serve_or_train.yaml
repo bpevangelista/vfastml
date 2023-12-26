@@ -1,0 +1,35 @@
+apis:
+- path: /v1/chat/completions
+  inputs:
+      - name: prompt
+        type: str
+      - name: model_uri
+        type: str
+        optional: true
+  outputs:
+      - name: result
+        type: str
+  train:
+      port: 6501
+      resources:
+          cpu: 2
+          memory: 16GB
+          gpu: 1
+          gpu_memory: 24GB
+      type: text-generation
+      model:
+          uri: {{inputs.model_uri}}
+  serve:
+      resources:
+          cpu: 2
+          memory: 16GB
+          gpu: 1
+          gpu_memory: 16GB
+      port: 6500
+      type: text-generation
+      model:
+          uri: mistralai/Mistral-7B-v0.1
+          device: cuda:0
+          params:
+          - top_k: 30
+            top_p: 0.9
