@@ -1,0 +1,20 @@
+apis:
+  - path: /v1/chat/completions
+    inputs:
+      - prompt: str
+      - model_uri: str
+        optional: true
+    outputs:
+      - result: str
+    rpc_port: 6502
+train:
+  model:
+    type: text-generation
+    uri: microsoft/phi-2
+    device: cuda:0
+  resources:
+    cpu: 2
+    memory: 16GB
+    gpu: 1
+    gpu_memory: 24GB
+  rpc_port: 6503

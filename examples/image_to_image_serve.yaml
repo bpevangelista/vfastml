@@ -1,13 +1,10 @@
 apis:
-- path: /v1/image/cleanup
-  inputs:
-      - name: image_uris
-        type: list[str]
-  outputs:
-      - name: images_data
-        type: list[bytes]
-  serve:
+  - path: /v1/image/cleanup
+    inputs:
+      - images_uri: list[str]
+    outputs:
+      - cleaned_images_uri: list[str]
+serves:
+  - model:
       type: image-to-image
-      model:
-          uri: wdnet-v1
-          device: cpu
+      uri: wdnet-v1

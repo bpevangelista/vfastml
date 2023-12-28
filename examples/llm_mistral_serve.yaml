@@ -1,0 +1,25 @@
+apis:
+  - path: /v1/chat/completions
+    inputs:
+      - prompt: str
+      - model_uri: str
+      - engine: str
+        optional: true
+    outputs:
+      - result: str
+    rpc_port: 6502
+servers:
+  - model:
+      type: text-generation
+      uri: mistralai/Mistral-7B-v0.1
+      device: cuda:0
+      generation_params:
+        top_k: 30
+        top_p: 0.9
+    resources:
+        cpu: 2
+        memory: 16GB
+        gpu: 1
+        gpu_memory: 16GB
+        storage: ssd_16GB
+    rpc_port: 6500
