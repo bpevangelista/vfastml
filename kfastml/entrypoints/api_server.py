@@ -5,12 +5,13 @@ from fastapi import FastAPI
 from fastapi.responses import Response
 from pydantic import BaseModel
 
-from kfastml.engine.inference_engine import AsyncInferenceEngine
+from kfastml.engine.dispatch_engine import AsyncDispatchEngine
+from kfastml.engine.dispatch_requests import TextGenerationReq, ImageToImageReq
 from kfastml.utils.api import build_json_response, gen_request_id
 
 
 def app_startup():
-    inference_engine.run()
+    dispatch_engine.run()
 
 
 def app_shutdown():
@@ -25,7 +26,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
-inference_engine: Optional[AsyncInferenceEngine] = None
+dispatch_engine: Optional[AsyncDispatchEngine] = None
 
 
 @app.get("/health")
@@ -34,9 +35,9 @@ async def health() -> Response:
 
 
 class ChatCompletionsRequest(BaseModel):
+    engine: Optional[str] = None
     system: Optional[str] = None
     prompt: str
-    engine: Optional[str] = None
 
 
 @app.post(path='/v1/chat/completions', status_code=200)
@@ -60,13 +61,16 @@ async def chat_completions(request: ChatCompletionsRequest):
     else:
         desired_engine = supported_engines['mistral']  # default
 
-    inference_job = inference_engine.dispatch(request_id=request_id,
-                                              model_uri=desired_engine['model'],
-                                              model_adapter_uri=None,
-                                              input_params=request.__dict__)
-    job_result = await inference_job.get_result()
+    dispatch_task = dispatch_engine.dispatch(
+        TextGenerationReq(
+            request_id=request_id,
+            model_uri=desired_engine['model'],
+            model_adapter_uri=None,
+            prompt=request.prompt,
+            extra_params=request.__dict__))
+    task_result = await dispatch_task.get_result()
 
-    response = build_json_response(request_id, job_result)
+    response = build_json_response(request_id, task_result)
     return response
 
 
@@ -78,9 +82,11 @@ class ImageCleanupRequest(BaseModel):
 async def image_cleanup(request: ImageCleanupRequest):
     request_id = gen_request_id('completions')
 
-    inference_job = inference_engine.dispatch(request_id=request_id,
-                                              model_uri='wdnet/wdnet-1',
-                                              input_params=request.__dict__)
-    job_result = await inference_job.get_result()
+    dispatch_task = dispatch_engine.dispatch(
+        ImageToImageReq(request_id=request_id,
+                        model_uri='wdnet/wdnet-1',
+                        image_data=request.image_data,
+                        extra_params=request.__dict__))
+    task_result = await dispatch_task.get_result()
 
-    return build_json_response(request_id, job_result)
+    return build_json_response(request_id, task_result)

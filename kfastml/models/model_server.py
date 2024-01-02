@@ -5,6 +5,10 @@ import torch
 import uvloop
 import zmq.asyncio
 
+from kfastml import log
+from kfastml.engine.dispatch_engine import AsyncDispatchEngine
+from kfastml.engine.dispatch_requests import BaseDispatchEngineRequest, DispatchEngineRequestResult, \
+    TextGenerationReq, ImageToImageReq
 from kfastml.utils import DEFAULT_API_SERVER_RPC_PORT, DEFAULT_MODEL0_SERVER_RPC_PORT
 
 # Use uvloop instead of asyncio
@@ -12,11 +16,14 @@ asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
 
 class ModelServer(ABC):
-    def __init__(self, model_type: str, model_uri: str, model_device: str = 'auto',
+    def __init__(self,
+                 model_type: str,
+                 model_uri: str,
+                 model_device: str = 'auto',
                  model_generation_params: dict = None,
                  api_rpc_port: int = DEFAULT_API_SERVER_RPC_PORT,
                  model_rpc_port: int = DEFAULT_MODEL0_SERVER_RPC_PORT,
-                 ) -> None:
+                 ):
         self.model_type = model_type
         self.model_uri = model_uri
         self.model_device = model_device
@@ -31,43 +38,53 @@ class ModelServer(ABC):
         self.event_loop.create_task(self._load_model())
 
         self._init_rpc()
-
-        # config torch
-        torch.set_default_device(model_device)
+        self._init_torch()
 
     def _init_rpc(self):
         context = zmq.asyncio.Context(2)
-        print(f'PULL tcp://127.0.0.1:{self.model_rpc_port}')
-        print(f'PUSH tcp://127.0.0.1:{self.api_rpc_port}')
+        log.info(f'PULL tcp://127.0.0.1:{self.model_rpc_port}')
+        log.info(f'PUSH tcp://127.0.0.1:{self.api_rpc_port}')
 
         self.pull_socket = context.socket(zmq.PULL)
         self.pull_socket.bind(f'tcp://127.0.0.1:{self.model_rpc_port}')
         self.push_socket = context.socket(zmq.PUSH)
         self.push_socket.connect(f'tcp://127.0.0.1:{self.api_rpc_port}')
 
+    def _init_torch(self):
+        torch.set_default_dtype(torch.float16)
+        torch.set_default_device(self.model_device)
+
     @abstractmethod
     async def _load_model(self):
         pass
 
-    async def _rpc_loop(self):
-        result = None
-        while self._is_running:
-            # debug
-            print('rpc loop', result)
+    @abstractmethod
+    async def _rpc_step(self, rpc_obj: BaseDispatchEngineRequest) -> any:
+        pass
 
-            result = await self.pull_socket.recv_json()
-            request_id = result['request_id']
-            self.push_socket.send_json({
-                'request_id': request_id,
-                'result': {
-                    'result': 'blah'
-                }
-            })
+    async def _rpc_loop(self):
+        while self._is_running:
+            log.debug(f'_rpc_loop')
+
+            rpc_obj: BaseDispatchEngineRequest = await self.pull_socket.recv_pyobj()
+            assert isinstance(rpc_obj, (TextGenerationReq, ImageToImageReq))
+
+            result = None
+            finished_reason = AsyncDispatchEngine.FINISHED_REASON_DONE
+            try:
+                result = await self._rpc_step(rpc_obj)
+            except Exception as e:
+                finished_reason = AsyncDispatchEngine.FINISHED_REASON_ERROR
+
+            self.push_socket.send_pyobj(DispatchEngineRequestResult(
+                request_id=rpc_obj.request_id,
+                finished_reason=finished_reason,
+                result=result,
+            ))
 
     async def _main_loop(self):
         while self._is_running:
-            # debug
-            print('_main_loop')
+            log.debug('_main_loop')
 
             await asyncio.sleep(2)
 
