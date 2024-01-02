@@ -2,7 +2,8 @@ import argparse
 
 import uvicorn
 
-from kfastml.engine.inference_engine import AsyncInferenceEngine
+from kfastml import log
+from kfastml.engine.dispatch_engine import AsyncDispatchEngine
 from kfastml.entrypoints import api_server
 
 
@@ -15,13 +16,14 @@ def handle_args():
 
 
 def api_main():
+    log.setLevel(log.DEBUG)
     args = handle_args()
     # args = read_args_from_yaml()
 
-    #api_server = ApiServer()
-    #api_server.run()
+    # api_server = ApiServer()
+    # api_server.run()
 
-    api_server.inference_engine = AsyncInferenceEngine()
+    api_server.dispatch_engine = AsyncDispatchEngine()
 
     uvicorn.run(
         api_server.app,
