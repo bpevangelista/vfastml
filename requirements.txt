@@ -1,6 +1,8 @@
 fastapi
 gunicorn
+pydantic
 pyzmq
 torch
 transformers
 uvicorn[standard]
+uvloop

@@ -17,9 +17,9 @@ servers:
         top_k: 30
         top_p: 0.9
     resources:
-        cpu: 2
-        memory: 16GB
-        gpu: 1
-        gpu_memory: 16GB
-        storage: ssd_16GB
+      cpus: 2
+      memory: 16GB
+      gpus: 1
+      gpu_memory: 16GB
+      storage: ssd_16GB
     rpc_port: 6500

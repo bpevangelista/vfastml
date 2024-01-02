@@ -13,8 +13,8 @@ train:
     uri: microsoft/phi-2
     device: cuda:0
   resources:
-    cpu: 2
+    cpus: 2
     memory: 16GB
-    gpu: 1
+    gpus: 1
     gpu_memory: 24GB
   rpc_port: 6503
