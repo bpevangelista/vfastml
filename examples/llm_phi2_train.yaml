@@ -9,7 +9,7 @@ apis:
     rpc_port: 6502
 train:
   model:
-    type: text-generation
+    type: text_generation
     uri: microsoft/phi-2
     device: cuda:0
   resources:

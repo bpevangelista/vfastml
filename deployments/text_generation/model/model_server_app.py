@@ -12,11 +12,10 @@ def handle_args():
     return args
 
 
-def model_main():
+if __name__ == '__main__':
     log.setLevel(log.DEBUG)
     args = handle_args()
 
-    # model_server = ModelServerHF(
     model_server = TextGenerationModelServerHF(
         model_type='text_generation',
         model_uri='mistralai/Mistral-7B-v0.1',
@@ -28,7 +27,3 @@ def model_main():
         }
     )
     model_server.run()
-
-
-if __name__ == '__main__':
-    model_main()

@@ -10,7 +10,7 @@ apis:
     rpc_port: 6502
 servers:
   - model:
-      type: text-generation
+      type: text_generation
       uri: mistralai/Mistral-7B-v0.1
       device: cuda:0
       generation_params:
