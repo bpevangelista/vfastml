@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: api_server
+  name: api_server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: api_server
+  template:
+    metadata:
+      labels:
+        app: api_server
+    spec:
+      containers:
+      - image: kfastml.text_generation.api_server:v1
+        name: api_server
+        ports:
+        - containerPort: 8080
+          name: api_server

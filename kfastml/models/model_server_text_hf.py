@@ -37,7 +37,7 @@ class TextGenerationModelServerHF(TextGenerationModelServer, ABC):
             torch_dtype=torch.float16,  # Default f16 (TODO use b16 if supported)
             load_in_8bit=False,         # True if Training
             low_cpu_mem_usage=False,    # True for unified memory (e.g. M1/M2)
-            use_flash_attention_2=True,
+            attn_implementation='flash_attention_2'
         )
 
         self._is_model_loaded = True
