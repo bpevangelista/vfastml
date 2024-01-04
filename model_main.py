@@ -12,7 +12,7 @@ def handle_args():
     return args
 
 
-def model_main():
+if __name__ == '__main__':
     log.setLevel(log.DEBUG)
     args = handle_args()
 
@@ -29,6 +29,3 @@ def model_main():
     )
     model_server.run()
 
-
-if __name__ == '__main__':
-    model_main()

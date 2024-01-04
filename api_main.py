@@ -15,7 +15,7 @@ def handle_args():
     return args
 
 
-def api_main():
+if __name__ == '__main__':
     log.setLevel(log.DEBUG)
     args = handle_args()
     # args = read_args_from_yaml()
@@ -32,7 +32,3 @@ def api_main():
         log_level='debug',
         loop='uvloop',
     )
-
-
-if __name__ == '__main__':
-    api_main()
