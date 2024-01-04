@@ -57,6 +57,7 @@ class TextGenerationModelServerHF(TextGenerationModelServer, ABC):
             'temperature': 0.8,
             'pad_token_id': self.tokenizer.eos_token_id,
             'eos_token_id': self.tokenizer.eos_token_id,
+            'max_new_tokens': 1024,
 
             'input_ids': input_ids,
             'attention_mask': attention_mask,
