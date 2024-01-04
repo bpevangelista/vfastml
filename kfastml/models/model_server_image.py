@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Optional
 
-from kfastml.engine.dispatch_requests import TextGenerationReq, ImageToImageReq
+from kfastml.engine.dispatch_requests import ImageToImageReq
 from kfastml.models.model_server import ModelServer
 from kfastml.utils import DEFAULT_API_SERVER_RPC_PORT, DEFAULT_MODEL0_SERVER_RPC_PORT
 

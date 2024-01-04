@@ -3,6 +3,7 @@ from typing import Optional
 
 import torch
 from transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer
+from transformers.utils import is_flash_attn_2_available
 
 from kfastml.models.model_server_text import TextGenerationModelServer
 from kfastml.utils import DEFAULT_API_SERVER_RPC_PORT, DEFAULT_MODEL0_SERVER_RPC_PORT
@@ -35,9 +36,10 @@ class TextGenerationModelServerHF(TextGenerationModelServer, ABC):
             trust_remote_code=True,
 
             torch_dtype=torch.float16,  # Default f16 (TODO use b16 if supported)
-            load_in_8bit=False,         # True if Training
-            low_cpu_mem_usage=False,    # True for unified memory (e.g. M1/M2)
-            attn_implementation='flash_attention_2'
+            load_in_8bit=False,  # True if Training
+            low_cpu_mem_usage=False,  # True for unified memory (e.g. M1/M2)
+            # TODO Fallback to 'sdpa'?
+            attn_implementation='flash_attention_2' if is_flash_attn_2_available() else None
         )
 
         self._is_model_loaded = True
