@@ -77,10 +77,13 @@ class AsyncDispatchEngine:
                 req_result.finished_reason, req_result.result)
 
     async def _main_loop(self):
+        log_count = 0
         while self._is_running:
-            log.debug('_main_loop')
+            if log_count % 10 == 0:
+                log.debug('_main_loop')
+            log_count += 1
 
-            await asyncio.sleep(2)
+            await asyncio.sleep(1)
 
     def dispatch(self, request: BaseDispatchEngineRequest) -> DispatchEngineTask:
         assert request.request_id not in self._id_to_task_map, 'duplicate request_id. Internal error?'
@@ -92,7 +95,8 @@ class AsyncDispatchEngine:
         return dispatch_task
 
     def cancel(self, request_id: str) -> bool:
-        pass
+        assert False, 'Not Implemented'
+        return False
 
     def run(self, event_loop: Optional[asyncio.AbstractEventLoop] = None):
         assert self._is_running is False, 'Already running. Are you starting it twice?'

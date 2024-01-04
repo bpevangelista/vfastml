@@ -56,11 +56,11 @@ class ModelServer(ABC):
 
     @abstractmethod
     async def _load_model(self):
-        pass
+        assert False, 'Not Implemented'
 
     @abstractmethod
     async def _rpc_step(self, rpc_obj: BaseDispatchEngineRequest) -> any:
-        pass
+        assert False, 'Not Implemented'
 
     async def _rpc_loop(self):
         while self._is_running:
@@ -83,10 +83,13 @@ class ModelServer(ABC):
             ))
 
     async def _main_loop(self):
+        log_count = 0
         while self._is_running:
-            log.debug('_main_loop')
+            if log_count % 10 == 0:
+                log.debug('_main_loop')
+            log_count += 1
 
-            await asyncio.sleep(2)
+            await asyncio.sleep(1)
 
     def run(self):
         assert not self._is_running

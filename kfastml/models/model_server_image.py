@@ -21,11 +21,11 @@ class ImageToImageModelServer(ModelServer, ABC):
         if isinstance(rpc_obj, ImageToImageReq):
             result = await self._image_to_image(rpc_obj.image_data, rpc_obj.extra_params)
         else:
-            assert False, 'Unsupported RPC object'
             # TODO Throw exception
+            assert False, 'Unsupported RPC object'
 
         return result
 
     @abstractmethod
     async def _image_to_image(self, image_data: any, generation_params: Optional[dict] = None):
-        pass
+        assert False, 'Not Implemented'

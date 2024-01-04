@@ -31,4 +31,4 @@ class TextGenerationModelServer(ModelServer, ABC):
 
     @abstractmethod
     async def _generate_text(self, prompt: str, generation_params: Optional[dict] = None):
-        pass
+        assert False, 'Not Implemented'
