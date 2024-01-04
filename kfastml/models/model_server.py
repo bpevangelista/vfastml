@@ -10,6 +10,7 @@ from kfastml.engine.dispatch_engine import AsyncDispatchEngine
 from kfastml.engine.dispatch_requests import BaseDispatchEngineRequest, DispatchEngineRequestResult, \
     TextGenerationReq, ImageToImageReq
 from kfastml.utils import DEFAULT_API_SERVER_RPC_PORT, DEFAULT_MODEL0_SERVER_RPC_PORT
+from kfastml.utils.api import _is_package_available
 
 # Use uvloop instead of asyncio
 asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
@@ -51,8 +52,22 @@ class ModelServer(ABC):
         self.push_socket.connect(f'tcp://127.0.0.1:{self.api_rpc_port}')
 
     def _init_torch(self):
-        torch.set_default_dtype(torch.float16)
+        log.info(f'Torch ({torch.__version__}), CPUs {torch.get_num_threads()}, GPUs: {torch.cuda.device_count()}')
+
+        for i in range(torch.cuda.device_count()):
+            cuda_device = torch.cuda.device(i)
+            device_info = torch.cuda.get_device_properties(cuda_device)
+            device_memory_in_gb = device_info.total_memory / (1024 * 1024 * 1024)
+            flash_attn_2 = _is_package_available('flash_attn', '2.4.2')
+            log.info(f'  {i:2d}: {device_info.name} {round(device_memory_in_gb, 2)}GB')
+            log.info(f'      {{bf16: {torch.cuda.is_bf16_supported()}, flash_attn_2: {flash_attn_2}}}')
+
         torch.set_default_device(self.model_device)
+        if torch.cuda.current_device() != -1:
+            log.info(f'Torch current_device: cuda:{torch.cuda.current_device()} f16')
+            torch.set_default_dtype(torch.float16)
+        else:
+            log.info(f'Torch current_device: cpu')
 
     @abstractmethod
     async def _load_model(self):
