@@ -15,8 +15,8 @@ spec:
         app: api_server
     spec:
       containers:
-      - image: kfastml.text_generation.api_server:v1
-        name: api_server
-        ports:
-        - containerPort: 8080
+        - image: kfastml.text_generation.api_server:v1
           name: api_server
+          ports:
+            - containerPort: 8080
+              name: api_server
