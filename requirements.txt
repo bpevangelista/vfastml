@@ -1,8 +1,8 @@
-fastapi
-gunicorn
-pydantic
-pyzmq
-torch
-transformers
-uvicorn[standard]
-uvloop
+fastapi~=0.103.0
+packaging
+pydantic~=2.3.0
+pyzmq~=25.1.2
+torch~=2.0.1+cu118
+transformers~=4.36.2
+uvicorn[standard]~=0.23.2
+uvloop~=0.19.0
