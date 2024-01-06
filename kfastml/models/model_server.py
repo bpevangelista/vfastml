@@ -1,6 +1,7 @@
 import asyncio
 import traceback
 from abc import abstractmethod, ABC
+from typing import Literal
 
 import torch
 import uvloop
@@ -22,14 +23,19 @@ class ModelServer(ABC):
                  model_type: str,
                  model_uri: str,
                  model_device: str = 'auto',
-                 model_generation_params: dict = None,
+                 model_load_kwargs: dict = None,
+                 model_forward_kwargs: dict = None,
+
                  api_rpc_port: int = DEFAULT_API_SERVER_RPC_PORT,
                  model_rpc_port: int = DEFAULT_MODEL0_SERVER_RPC_PORT,
+                 log_level: Literal['debug', 'info', 'warn', 'error'] = 'info',
                  ):
+        self.model = None
         self.model_type = model_type
         self.model_uri = model_uri
         self.model_device = model_device
-        self.model_generation_params = model_generation_params
+        self.model_load_kwargs = model_load_kwargs
+        self.model_forward_kwargs = model_forward_kwargs
 
         self.api_rpc_port = api_rpc_port
         self.model_rpc_port = model_rpc_port
@@ -38,6 +44,7 @@ class ModelServer(ABC):
         self._is_model_loaded = False
         self._event_loop = asyncio.new_event_loop()
 
+        log.set_level(log_level)
         self._init_rpc()
         self._init_torch()
 
@@ -68,13 +75,12 @@ class ModelServer(ABC):
             torch.set_default_dtype(torch.float16)
         else:
             log.info(f'Torch current_device: cpu')
-
     @abstractmethod
     async def _load_model(self):
         assert False, 'Not Implemented'
 
     @abstractmethod
-    async def _rpc_step(self, rpc_obj: BaseDispatchEngineRequest) -> any:
+    async def _rpc_step(self, rpc_obj: BaseDispatchEngineRequest) -> dict | None:
         assert False, 'Not Implemented'
 
     async def _rpc_loop(self):
