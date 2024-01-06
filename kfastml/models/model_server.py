@@ -36,8 +36,7 @@ class ModelServer(ABC):
 
         self._is_running = False
         self._is_model_loaded = False
-        self.event_loop = asyncio.new_event_loop()
-        self.event_loop.create_task(self._load_model())
+        self._event_loop = asyncio.new_event_loop()
 
         self._init_rpc()
         self._init_torch()
@@ -114,6 +113,7 @@ class ModelServer(ABC):
         assert not self._is_running
 
         self._is_running = True
-        self.event_loop.create_task(self._rpc_loop())
-        self.event_loop.create_task(self._main_loop())
-        self.event_loop.run_forever()
+        self._event_loop.create_task(self._load_model())
+        self._event_loop.create_task(self._rpc_loop())
+        self._event_loop.create_task(self._main_loop())
+        self._event_loop.run_forever()
