@@ -5,6 +5,7 @@ __license__ = 'Apache 2.0'
 # Setup Logging
 # --------------------------------------------------------------------------------
 import logging
+from typing import Literal
 
 logging.addLevelName(logging.DEBUG, "\x1b[38;20mDEBUG\x1b[0m")
 logging.addLevelName(logging.INFO, "\x1b[32;20mINFO \x1b[0m")
@@ -13,11 +14,6 @@ logging.addLevelName(logging.ERROR, "\x1b[31;20mERROR\x1b[0m")
 
 
 class DefaultLogger(logging.Logger):
-    DEBUG = logging.DEBUG
-    INFO = logging.INFO
-    WARNING = logging.WARNING
-    ERROR = logging.ERROR
-
     def __init__(self, name):
         super().__init__(name)
         self.handler = logging.StreamHandler()
@@ -26,8 +22,19 @@ class DefaultLogger(logging.Logger):
         )
         self.addHandler(self.handler)
 
-    def setLevel(self, level):
-        self.handler.setLevel(level)
+    def set_level(
+            self,
+            log_level : Literal['debug', 'info', 'warn', 'error'],
+        ):
+        str_to_id = {
+            'debug': logging.DEBUG,
+            'info': logging.INFO,
+            'warn': logging.WARNING,
+            'error': logging.ERROR,
+        }
+
+        new_log_level = str_to_id[log_level] if log_level in str_to_id else logging.INFO
+        self.handler.setLevel(new_log_level)
 
 
 log = DefaultLogger('kfastml')
