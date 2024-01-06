@@ -1,7 +1,13 @@
+import asyncio
 import socket
+import traceback
+from asyncio import Future
 from typing import Optional
 
+import requests
 import zmq
+
+from kfastml import log
 
 
 def get_unused_network_ports(count: int, start_range: int = 8000, exclude_map: dict = {}) -> list[int]:
@@ -41,3 +47,19 @@ def recv_noblock_pyobj(reply_socket: zmq.Socket) -> object:
         if err.errno != zmq.EAGAIN:
             raise
     return None
+
+
+def download_from_uri(uri: str) -> Future[bytes | None]:
+    # noinspection PyBroadException
+    def _sync_bytesio_request(_uri: str) -> [bytes | None]:
+        try:
+            response = requests.get(uri)
+            if response.status_code == 200:
+                return response.content
+        except:
+            log.error(traceback.format_exc())
+        return None
+
+    loop = asyncio.get_running_loop()
+    future = loop.run_in_executor(None, _sync_bytesio_request, uri)
+    return future
