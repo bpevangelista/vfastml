@@ -1,4 +1,5 @@
 import asyncio
+import traceback
 from abc import abstractmethod, ABC
 
 import torch
@@ -86,10 +87,13 @@ class ModelServer(ABC):
 
             result = None
             finished_reason = AsyncDispatchEngine.FINISHED_REASON_DONE
+
+            # noinspection PyBroadException
             try:
                 result = await self._rpc_step(rpc_obj)
-            except Exception as e:
+            except:
                 finished_reason = AsyncDispatchEngine.FINISHED_REASON_ERROR
+                log.error(traceback.format_exc())
 
             self.push_socket.send_pyobj(DispatchEngineRequestResult(
                 request_id=rpc_obj.request_id,
