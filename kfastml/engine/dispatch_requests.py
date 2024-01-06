@@ -40,10 +40,10 @@ class ImageToImageReq(BaseDispatchEngineRequest):
     def __init__(self,
                  request_id: str,
                  model_uri: str,
-                 image_data: any,
+                 images: list[str | bytes],
                  extra_params: Optional[dict] = None,
                  ):
         super().__init__(request_id)
         self.model_uri = model_uri
-        self.image_data = image_data
+        self.images = images
         self.extra_params = extra_params
