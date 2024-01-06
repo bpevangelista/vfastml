@@ -59,7 +59,25 @@ class ModelServer(ABC):
         self.push_socket.connect(f'tcp://127.0.0.1:{self.api_rpc_port}')
 
     def _init_torch(self):
-        log.info(f'Torch ({torch.__version__}), CPUs {torch.get_num_threads()}, GPUs: {torch.cuda.device_count()}')
+        log.debug(torch.__config__.show())
+
+        log.info(
+            f'Torch ({torch.__version__}), CPUs: {torch.get_num_threads()}, ' +
+            f'CUDA_GPUs: {torch.cuda.device_count()}, ' +
+            f'MPS_GPU: {torch.backends.mps.is_available()}')
+
+        backends = {
+            'CPU': torch.backends.cpu.get_cpu_capability(),
+            'CU_DNN': torch.backends.cudnn.is_available(),
+            'MKL_DNN': torch.backends.mkldnn.is_available(),
+            'MKL': torch.backends.mkl.is_available(),
+            'OpenMP': torch.backends.openmp.is_available(),
+        }
+        torch_backends = ''
+        for key, value in backends.items():
+            torch_backends += ', ' if len(torch_backends) > 0 else '  '
+            torch_backends += f'{key} {value}'
+        log.info(torch_backends)
 
         for i in range(torch.cuda.device_count()):
             cuda_device = torch.cuda.device(i)
@@ -70,11 +88,8 @@ class ModelServer(ABC):
             log.info(f'      {{bf16: {torch.cuda.is_bf16_supported()}, flash_attn_2: {flash_attn_2}}}')
 
         torch.set_default_device(self.model_device)
-        if torch.cuda.current_device() != -1:
-            log.info(f'Torch current_device: cuda:{torch.cuda.current_device()} f16')
-            torch.set_default_dtype(torch.float16)
-        else:
-            log.info(f'Torch current_device: cpu')
+        # TODO When it gets released, call torch.get_default_device to make sure it was set properly
+
     @abstractmethod
     async def _load_model(self):
         assert False, 'Not Implemented'
