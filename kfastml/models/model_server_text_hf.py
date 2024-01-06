@@ -1,30 +1,19 @@
 from abc import ABC
-from typing import Optional
 
 import torch
-from transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer
+from transformers import AutoModelForCausalLM, AutoTokenizer
 from transformers.utils import is_flash_attn_2_available
 
 from kfastml.models.model_server_text import TextGenerationModelServer
-from kfastml.utils import DEFAULT_API_SERVER_RPC_PORT, DEFAULT_MODEL0_SERVER_RPC_PORT
 
 
 class TextGenerationModelServerHF(TextGenerationModelServer, ABC):
 
-    def __init__(self, model_type: str, model_uri: str, model_device: str = 'auto',
-                 model_generation_params: dict = None, api_rpc_port: int = DEFAULT_API_SERVER_RPC_PORT,
-                 model_rpc_port: int = DEFAULT_MODEL0_SERVER_RPC_PORT):
-        super().__init__(model_type, model_uri, model_device, model_generation_params, api_rpc_port, model_rpc_port)
-        self.config = None
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.tokenizer = None
-        self.model = None
 
     async def _load_model(self):
-        self.config = AutoConfig.from_pretrained(
-            self.model_uri,
-            trust_remote_code=True,
-        )
-
         self.tokenizer = AutoTokenizer.from_pretrained(
             self.model_uri,
             trust_remote_code=True,
@@ -44,7 +33,7 @@ class TextGenerationModelServerHF(TextGenerationModelServer, ABC):
 
         self._is_model_loaded = True
 
-    async def _generate_text(self, prompt: str, generation_params: Optional[dict] = None):
+    async def _generate_text(self, prompt: str, **kwargs) -> dict | None:
         generated_tokens = self.tokenizer(prompt, return_tensors="pt")
         input_ids = generated_tokens.input_ids
         attention_mask = generated_tokens.attention_mask
