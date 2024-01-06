@@ -24,8 +24,8 @@ class DefaultLogger(logging.Logger):
 
     def set_level(
             self,
-            log_level : Literal['debug', 'info', 'warn', 'error'],
-        ):
+            log_level: Literal['debug', 'info', 'warn', 'error'],
+    ):
         str_to_id = {
             'debug': logging.DEBUG,
             'info': logging.INFO,

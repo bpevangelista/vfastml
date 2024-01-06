@@ -3,7 +3,7 @@ apis:
     inputs:
       - images_uri: list[str]
     outputs:
-      - cleaned_images_uri: list[str]
+      - images_uri: list[str]
 serves:
   - model:
       type: image-to-image

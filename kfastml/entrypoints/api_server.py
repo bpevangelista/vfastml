@@ -49,7 +49,6 @@ class FastMLServer:
 
         log.set_level(FastMLServer._log_level)
 
-
     @staticmethod
     def run(**kwargs):
         assert not FastMLServer._is_running, "Already running!"
