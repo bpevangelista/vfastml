@@ -1,19 +1,29 @@
-from typing import Optional
+from typing import Literal
+
+from kfastml.errors import ErrorResult
 
 
-class DispatchEngineRequestResult:
+class DispatchRequestResult:
     def __init__(self,
                  request_id: str,
-                 finished_reason: str,
-                 result: any,
+                 result: dict | None,
+                 error: ErrorResult | None = None,
                  ):
         assert type(request_id) is str
+        assert result is None or error is None
         self.request_id = request_id
-        self.finished_reason = finished_reason
         self.result = result
+        self.error = error
+
+    def succeeded(self) -> bool:
+        return self.error is None
+
+    @staticmethod
+    def from_exception(request_id: str, error: Exception):
+        return DispatchRequestResult(request_id, None, ErrorResult.from_exception(error))
 
 
-class BaseDispatchEngineRequest:
+class BaseDispatchRequest:
     def __init__(self,
                  request_id: str,
                  ):
@@ -21,27 +31,33 @@ class BaseDispatchEngineRequest:
         self.request_id = request_id
 
 
-class TextGenerationReq(BaseDispatchEngineRequest):
+class TextGenerationMessage:
+    def __init__(self, role: Literal['system', 'user', 'assistant'], content: str):
+        self.role = role
+        self.content = content
+
+
+class TextGenerationReq(BaseDispatchRequest):
     def __init__(self,
                  request_id: str,
                  model_uri: str,
-                 model_adapter_uri: Optional[str] = None,
-                 prompt: str = None,
-                 extra_params: Optional[dict] = None,
+                 model_adapter_uri: str | None = None,
+                 messages: str | list[TextGenerationMessage] = None,
+                 extra_params: dict | None = None,
                  ):
         super().__init__(request_id)
         self.model_uri = model_uri
         self.model_adapter_uri = model_adapter_uri
-        self.prompt = prompt
+        self.messages = messages
         self.extra_params = extra_params
 
 
-class ImageToImageReq(BaseDispatchEngineRequest):
+class ImageToImageReq(BaseDispatchRequest):
     def __init__(self,
                  request_id: str,
                  model_uri: str,
                  images: list[str | bytes],
-                 extra_params: Optional[dict] = None,
+                 extra_params: dict | None = None,
                  ):
         super().__init__(request_id)
         self.model_uri = model_uri
