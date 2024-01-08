@@ -7,7 +7,7 @@ build and k8s deployment.
 
 ![Screenshot](docs/architecture.png)
 
-### Why?:
+### Why?
 
 - Easy serving and training of diverse ML pipelines
 - Horizontal Scalability and Stability with k8s (deploy and forget)
@@ -15,10 +15,9 @@ build and k8s deployment.
 ### TODOs:
 
 - Support continuous batching (per-iteration)
-- For LLM, make sure we use flash-attention-v2 + (paged-attention |
-  token-attention)
+- For LLM, we use flash-attn-v2 but need to check KV_Cache implementation
 
 ### Minors:
 
-- Update excalidraw
-- Wait model before REST API available
+- Wait model_server before REST API available
+- Support api_server to N-models router (for multi-engine support)
