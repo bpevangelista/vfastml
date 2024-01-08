@@ -4,15 +4,13 @@ from typing import Literal
 import uvicorn
 from fastapi import FastAPI
 from fastapi.responses import Response
-from pydantic import BaseModel
 
 from kfastml import log
 from kfastml.engine.dispatch_engine import AsyncDispatchEngine
-from kfastml.engine.dispatch_requests import TextGenerationReq
-from kfastml.utils.api import build_json_response, gen_request_id
 
 
 def app_startup():
+    # noinspection PyProtectedMember
     if FastMLServer._dispatch_engine_type == 'async':
         FastMLServer.dispatch_engine = AsyncDispatchEngine()
     FastMLServer.dispatch_engine.run()
@@ -23,7 +21,7 @@ def app_shutdown():
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(_: FastAPI):
     app_startup()
     yield
     app_shutdown()
@@ -63,33 +61,3 @@ class FastMLServer:
 @FastMLServer.app.get("/health")
 async def health() -> Response:
     return Response(status_code=200)
-
-
-class ChatCompletionsRequest(BaseModel):
-    engine: str | None = None
-    system: str | None = None
-    prompt: str
-
-
-@FastMLServer.app.post(path='/v1/chat/completions', status_code=200)
-async def chat_completions(request: ChatCompletionsRequest):
-    request_id = gen_request_id('completions')
-
-    available_engines = {
-        'llama2': {'model': 'meta-llama/Llama-2-7b-chat-hf'},
-        'mistral': {'model': 'mistralai/Mistral-7B-v0.1'},
-        'phi2': {'model': 'microsoft/phi-2'},
-    }
-    selected_engine = available_engines.get(request.engine, available_engines['mistral'])
-
-    dispatch_task = FastMLServer.dispatch_engine.dispatch(
-        TextGenerationReq(
-            request_id=request_id,
-            model_uri=selected_engine['model'],
-            model_adapter_uri=None,
-            prompt=request.prompt,
-            extra_params=request.__dict__))
-    task_result = await dispatch_task.get_result()
-
-    response = build_json_response(request_id, task_result)
-    return response
