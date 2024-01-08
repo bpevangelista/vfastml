@@ -1,0 +1,45 @@
+#FROM nvidia/cuda:11.8.0-base-ubuntu20.04 AS base_image
+FROM ubuntu:20.04 AS base_image
+
+ARG TARGETPLATFORM
+ARG BUILDPLATFORM
+RUN echo "I am running on $BUILDPLATFORM, building for $TARGETPLATFORM" > /log
+
+ARG PYTHON_VERSION=3.11.6
+ARG MAMBA_VERSION=22.11.1-4 # conda-forge installer
+
+ENV PATH /opt/conda/bin:$PATH
+
+
+# Install apt packages
+RUN apt-get update \
+ && apt-get -y upgrade \
+ && apt-get install -y --allow-downgrades --allow-change-held-packages --no-install-recommends \
+    ca-certificates \
+    curl \
+    wget \
+ && apt-get autoremove -y \
+ && rm -rf /var/lib/apt/lists/* \
+ && apt-get clean
+
+# Miniforge installer for conda-forge (community conda channel)
+RUN curl -L -o ~/mambaforge.sh https://github.com/conda-forge/miniforge/releases/download/${MAMBA_VERSION}/Mambaforge-${MAMBA_VERSION}-Linux-x86_64.sh \
+ && chmod +x ~/mambaforge.sh \
+ && ~/mambaforge.sh -b -p /opt/conda \
+ && rm ~/mambaforge.sh \
+ && /opt/conda/bin/conda install -c \
+    conda-forge \
+    python=${PYTHON_VERSION} \
+    conda-content-trust \
+    charset-normalizer \
+ && /opt/conda/bin/conda clean -ya
+
+WORKDIR /app
+COPY kfastml kfastml
+COPY deployments/text_generation/api/model_server_app.py .
+
+RUN pip install -r requirements.txt
+
+EXPOSE 8080
+
+ENTRYPOINT ["python3", "-m", "prebuilt_apps.openai.model_server"]
