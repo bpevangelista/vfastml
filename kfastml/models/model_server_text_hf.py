@@ -4,7 +4,9 @@ import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from transformers.utils import is_flash_attn_2_available
 
-from kfastml.models.model_server_text import TextGenerationModelServer
+from kfastml import log
+from kfastml.errors import InvalidRequestError
+from kfastml.models.model_server_text import TextGenerationModelServer, TextGenerationMessage
 
 
 class TextGenerationModelServerHF(TextGenerationModelServer, ABC):
@@ -33,8 +35,15 @@ class TextGenerationModelServerHF(TextGenerationModelServer, ABC):
 
         self._is_model_loaded = True
 
-    async def _generate_text(self, prompt: str, **kwargs) -> dict | None:
-        generated_tokens = self.tokenizer(prompt, return_tensors="pt")
+    async def _generate_text(self, request_id: str, prompt: str | list[TextGenerationMessage], **kwargs) -> dict:
+        try:
+            # Llama2 ref: https://github.com/facebookresearch/llama/blob/main/llama/generation.py#L284
+            model_prompt = self.tokenizer.apply_chat_template(prompt, tokenize=False, add_generation_prompt=True)
+            log.debug(f'apply_chat_template {model_prompt}')
+        except Exception as e:
+            raise InvalidRequestError(e)
+
+        generated_tokens = self.tokenizer(model_prompt, return_tensors="pt")
         input_ids = generated_tokens.input_ids
         attention_mask = generated_tokens.attention_mask
 
@@ -46,12 +55,26 @@ class TextGenerationModelServerHF(TextGenerationModelServer, ABC):
             'temperature': 0.8,
             'pad_token_id': self.tokenizer.eos_token_id,
             'eos_token_id': self.tokenizer.eos_token_id,
-            'max_new_tokens': 1024,
+            'max_new_tokens': 64,
 
             'input_ids': input_ids,
             'attention_mask': attention_mask,
         }
 
+        log.debug(f'model.generate')
         output = self.model.generate(**model_params)
-        output_texts = self.tokenizer.batch_decode(output, skip_special_tokens=True)
-        return output_texts[0]
+        output_texts = self.tokenizer.batch_decode(output, skip_special_tokens=False)
+        log.debug(f'tokenizer.batch_decode {output_texts}')
+
+        # TODO Properly handle & return OpenAI result
+        return {
+            'choices': [
+                {
+                    'index': 0,
+                    'message': {
+                        'role': 'assistant',
+                        'content': output_texts[0]
+                    }
+                }
+            ]
+        }

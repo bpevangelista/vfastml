@@ -60,7 +60,7 @@ class ModelServer(ABC):
         self.push_socket.connect(f'tcp://127.0.0.1:{self.api_rpc_port}')
 
     def _init_torch(self):
-        # log.debug(torch.__config__.show())
+        # log.debug(torch.__config__.show()) # Too verbose
 
         log.info(
             f'Torch ({torch.__version__}), CPUs: {torch.get_num_threads()}, ' +
