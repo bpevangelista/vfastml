@@ -10,13 +10,13 @@ import zmq
 from kfastml import log
 
 
-def get_unused_network_ports(count: int, start_range: int = 8000, exclude_map: dict = {}) -> list[int]:
+def get_unused_network_ports(count: int, start_range: int = 8000, exclude_map: dict = None) -> list[int]:
     assert count > 0
     unused_ports = []
     for port in range(start_range, 65535):
         if count <= 0:
             break
-        if port in exclude_map:
+        if exclude_map and port in exclude_map:
             continue
         with (socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s):
             s.settimeout(0)
@@ -49,17 +49,27 @@ def recv_noblock_pyobj(reply_socket: zmq.Socket) -> object:
     return None
 
 
-def download_from_uri(uri: str) -> Future[bytes | None]:
+def download_uris_async(uris: list[str]) -> list[Future[bytes | None]]:
     # noinspection PyBroadException
     def _sync_bytesio_request(_uri: str) -> [bytes | None]:
         try:
-            response = requests.get(uri)
+            response = requests.get(_uri)
             if response.status_code == 200:
                 return response.content
         except:
             log.error(traceback.format_exc())
         return None
 
-    loop = asyncio.get_running_loop()
-    future = loop.run_in_executor(None, _sync_bytesio_request, uri)
-    return future
+    def _download_uri(uri: str) -> Future[bytes | None]:
+        loop = asyncio.get_event_loop()
+        submit_future = loop.run_in_executor(None, _sync_bytesio_request, uri)
+        return submit_future
+
+    return [_download_uri(uri) for uri in uris]
+
+
+def download_uris(uris: list[str]) -> list[bytes | None]:
+    futures = download_uris_async(uris)
+    loop = asyncio.get_event_loop()
+    results = loop.run_until_complete(asyncio.gather(*futures))
+    return list(results)
