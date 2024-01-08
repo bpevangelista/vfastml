@@ -6,7 +6,7 @@ from transformers.utils import is_flash_attn_2_available
 
 from kfastml import log
 from kfastml.errors import InvalidRequestError
-from kfastml.models.model_server_text import TextGenerationModelServer, TextGenerationMessage
+from kfastml.models_servers.model_server_text import TextGenerationModelServer, TextGenerationMessage
 
 
 class TextGenerationModelServerHF(TextGenerationModelServer, ABC):
