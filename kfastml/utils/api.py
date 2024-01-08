@@ -3,21 +3,32 @@ from datetime import datetime
 
 from fastapi.responses import JSONResponse
 
-from kfastml.engine.dispatch_engine import DispatchEngineTaskResult
+from kfastml.engine.dispatch_requests import DispatchRequestResult
+from kfastml.errors import UserError, InternalServerError, ErrorResult
 
 
 def gen_request_id(api_name: str) -> str:
     return f'{api_name}_{uuid.uuid4().hex}'
 
 
-def build_json_response(request_id: str, job_result: DispatchEngineTaskResult) -> JSONResponse:
-    return JSONResponse({
-        'created': f'{datetime.now()}',
-        'id': request_id,
+def build_json_response(request_id: str, task_result: DispatchRequestResult) -> JSONResponse:
+    if task_result.succeeded():
+        status_code = 200
+        response_json = {
+            'id': request_id,
+            'created': f'{datetime.now()}',
+        }
 
-        'finished_reason': job_result.finished_reason,
-        'result': job_result.result,
-    })
+        if isinstance(task_result.result, dict):
+            response_json.update(task_result.result)
+        else:
+            response_json['result'] = task_result.result
+
+    else:
+        status_code = task_result.error.status_code
+        response_json = task_result.error.error
+
+    return JSONResponse(status_code=status_code, content=response_json)
 
 
 def _is_package_available(package_name: str, min_version: str = None) -> bool:
