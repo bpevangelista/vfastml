@@ -8,10 +8,11 @@ import uvloop
 import zmq.asyncio
 
 from kfastml import log
-from kfastml.engine.dispatch_engine import AsyncDispatchEngine
-from kfastml.engine.dispatch_requests import BaseDispatchEngineRequest, DispatchEngineRequestResult, \
+from kfastml.engine.dispatch_requests import BaseDispatchRequest, DispatchRequestResult, \
     TextGenerationReq, ImageToImageReq
+from kfastml.errors import UserError, InternalServerError
 from kfastml.utils import DEFAULT_API_SERVER_RPC_PORT, DEFAULT_MODEL0_SERVER_RPC_PORT
+# noinspection PyProtectedMember
 from kfastml.utils.api import _is_package_available
 
 # Use uvloop instead of asyncio
@@ -59,7 +60,7 @@ class ModelServer(ABC):
         self.push_socket.connect(f'tcp://127.0.0.1:{self.api_rpc_port}')
 
     def _init_torch(self):
-        log.debug(torch.__config__.show())
+        # log.debug(torch.__config__.show())
 
         log.info(
             f'Torch ({torch.__version__}), CPUs: {torch.get_num_threads()}, ' +
@@ -67,7 +68,7 @@ class ModelServer(ABC):
             f'MPS_GPU: {torch.backends.mps.is_available()}')
 
         backends = {
-            'CPU': torch.backends.cpu.get_cpu_capability(),
+            # 'CPU': torch.backends.cpu.get_cpu_capability(), # requires torch^=2.1.2
             'CU_DNN': torch.backends.cudnn.is_available(),
             'MKL_DNN': torch.backends.mkldnn.is_available(),
             'MKL': torch.backends.mkl.is_available(),
@@ -95,31 +96,32 @@ class ModelServer(ABC):
         assert False, 'Not Implemented'
 
     @abstractmethod
-    async def _rpc_step(self, rpc_obj: BaseDispatchEngineRequest) -> dict | None:
+    async def _rpc_step(self, rpc_obj: BaseDispatchRequest) -> (dict | None, dict | None):
         assert False, 'Not Implemented'
 
     async def _rpc_loop(self):
         while self._is_running:
             log.debug(f'_rpc_loop')
 
-            rpc_obj: BaseDispatchEngineRequest = await self.pull_socket.recv_pyobj()
-            assert isinstance(rpc_obj, (TextGenerationReq, ImageToImageReq))
-
-            result = None
-            finished_reason = AsyncDispatchEngine.FINISHED_REASON_DONE
-
             # noinspection PyBroadException
             try:
-                result = await self._rpc_step(rpc_obj)
-            except:
-                finished_reason = AsyncDispatchEngine.FINISHED_REASON_ERROR
-                log.error(traceback.format_exc())
+                rpc_obj: BaseDispatchRequest = await self.pull_socket.recv_pyobj()
+                if not isinstance(rpc_obj, (TextGenerationReq, ImageToImageReq)):
+                    raise InternalServerError()
 
-            self.push_socket.send_pyobj(DispatchEngineRequestResult(
-                request_id=rpc_obj.request_id,
-                finished_reason=finished_reason,
-                result=result,
-            ))
+                rpc_result = await self._rpc_step(rpc_obj)
+                result = DispatchRequestResult(
+                    request_id=rpc_obj.request_id,
+                    result=rpc_result
+                )
+            except UserError as e:
+                log.debug(f'UserError {e}')
+                result = DispatchRequestResult.from_exception(rpc_obj.request_id, e)
+            except (InternalServerError, Exception):
+                log.error(traceback.format_exc())
+                result = DispatchRequestResult.from_exception(rpc_obj.request_id, InternalServerError())
+
+            self.push_socket.send_pyobj(result)
 
     async def _main_loop(self):
         log_count = 0
