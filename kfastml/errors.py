@@ -53,5 +53,6 @@ class ErrorResult:
         }
 
     @staticmethod
-    def from_exception(error: UserError | InternalServerError):
-        return ErrorResult(error.status_code, type(error).__name__, str(error))
+    def from_exception(error: Exception):
+        status_code = error.status_code if isinstance(error, UserError) else 500
+        return ErrorResult(status_code, type(error).__name__, str(error))
