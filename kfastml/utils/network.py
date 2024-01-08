@@ -49,18 +49,18 @@ def recv_noblock_pyobj(reply_socket: zmq.Socket) -> object:
     return None
 
 
-def download_uris_async(uris: list[str]) -> list[Future[bytes | None]]:
+def download_uris_async(uris: list[str]) -> list[Future[(str, bytes | None)]]:
     # noinspection PyBroadException
     def _sync_bytesio_request(_uri: str) -> [bytes | None]:
         try:
             response = requests.get(_uri)
             if response.status_code == 200:
-                return response.content
+                return _uri, response.content
         except:
             log.error(traceback.format_exc())
-        return None
+        return _uri, None
 
-    def _download_uri(uri: str) -> Future[bytes | None]:
+    def _download_uri(uri: str) -> Future[(str, bytes | None)]:
         loop = asyncio.get_event_loop()
         submit_future = loop.run_in_executor(None, _sync_bytesio_request, uri)
         return submit_future
