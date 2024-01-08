@@ -1,21 +1,17 @@
 import asyncio
+import traceback
 from typing import Optional
 
 import uvloop
 import zmq.asyncio
 
 from kfastml import log
-from kfastml.engine.dispatch_requests import BaseDispatchEngineRequest, DispatchEngineRequestResult
-from kfastml.utils import DEFAULT_API_SERVER_RPC_PORT, DEFAULT_MODEL0_SERVER_RPC_PORT
+from kfastml.engine.dispatch_requests import BaseDispatchRequest, DispatchRequestResult
+from kfastml.errors import InternalServerError
+from kfastml.utils import DEFAULT_API_SERVER_RPC_PORT, DEFAULT_MODEL0_SERVER_RPC_PORT, api as api_utils
 
 # Use uvloop instead of asyncio
 asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
-
-
-class DispatchEngineTaskResult:
-    def __init__(self, finished_reason: str, result: dict):
-        self.finished_reason = finished_reason
-        self.result = result
 
 
 class DispatchEngineTask:
@@ -24,25 +20,16 @@ class DispatchEngineTask:
         self._task_result = None
         self._finished = asyncio.Event()
 
-    def _set_finished(self, finished_reason: str, result: dict):
-        self._task_result = DispatchEngineTaskResult(finished_reason, result)
+    def _set_finished(self, result: DispatchRequestResult):
+        self._task_result = result
         self._finished.set()
 
-    async def get_result(self) -> DispatchEngineTaskResult:
+    async def get_result(self) -> DispatchRequestResult:
         await self._finished.wait()
         return self._task_result
 
 
-class AsyncDispatchEngineParams:
-    def __init__(self):
-        pass
-
-
 class AsyncDispatchEngine:
-    FINISHED_REASON_DONE: str = 'done'
-    FINISHED_REASON_CANCELED: str = 'canceled'
-    FINISHED_REASON_ERROR: str = 'error'
-
     def __init__(self,
                  api_rpc_port: int = DEFAULT_API_SERVER_RPC_PORT,
                  model_rpc_port: int = DEFAULT_MODEL0_SERVER_RPC_PORT,
@@ -70,11 +57,11 @@ class AsyncDispatchEngine:
         while self._is_running:
             log.debug('_rpc_loop')
 
-            req_result: DispatchEngineRequestResult = await self.pull_socket.recv_pyobj()
-            assert isinstance(req_result, DispatchEngineRequestResult)
+            req_result: DispatchRequestResult = await self.pull_socket.recv_pyobj()
+            assert isinstance(req_result, DispatchRequestResult)
 
-            self._id_to_task_map[req_result.request_id]._set_finished(
-                req_result.finished_reason, req_result.result)
+            # noinspection PyProtectedMember
+            self._id_to_task_map[req_result.request_id]._set_finished(req_result)
 
     async def _main_loop(self):
         log_count = 0
@@ -85,18 +72,32 @@ class AsyncDispatchEngine:
 
             await asyncio.sleep(1)
 
-    def dispatch(self, request: BaseDispatchEngineRequest) -> DispatchEngineTask:
-        assert request.request_id not in self._id_to_task_map, 'duplicate request_id. Internal error?'
+    def dispatch_err(self, request: BaseDispatchRequest) -> DispatchEngineTask:
+        if request.request_id in self._id_to_task_map:
+            raise InternalServerError()
 
         dispatch_task = DispatchEngineTask(request.request_id)
         self._id_to_task_map[request.request_id] = dispatch_task
+
         self.push_socket.send_pyobj(request)
 
         return dispatch_task
 
+    def dispatch(self, request: BaseDispatchRequest) -> DispatchEngineTask:
+        # noinspection PyBroadException
+        try:
+            task = self.dispatch_err(request)
+        except:
+            log.error(traceback.format_exc())
+            task = DispatchEngineTask(request.request_id)
+            # noinspection PyProtectedMember
+            task._set_finished(
+                api_utils.build_request_error(request.request_id, InternalServerError())
+            )
+        return task
+
     def cancel(self, request_id: str) -> bool:
-        assert False, 'Not Implemented'
-        return False
+        raise NotImplementedError
 
     def run(self, event_loop: Optional[asyncio.AbstractEventLoop] = None):
         assert self._is_running is False, 'Already running. Are you starting it twice?'
