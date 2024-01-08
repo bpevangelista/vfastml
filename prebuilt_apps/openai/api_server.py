@@ -40,8 +40,7 @@ async def chat_completions(request: ChatCompletionsRequest):
             messages=messages))
     task_result = await dispatch_task.get_result()
 
-    response = api_utils.build_json_response(request_id, task_result)
-    return response
+    return api_utils.build_json_response(request_id, task_result)
 
 
 def handle_args():

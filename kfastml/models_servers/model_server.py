@@ -13,7 +13,7 @@ from kfastml.engine.dispatch_requests import BaseDispatchRequest, DispatchReques
 from kfastml.errors import UserError, InternalServerError
 from kfastml.utils import DEFAULT_API_SERVER_RPC_PORT, DEFAULT_MODEL0_SERVER_RPC_PORT
 # noinspection PyProtectedMember
-from kfastml.utils.api import _is_package_available
+from kfastml.utils import _is_package_available
 
 # Use uvloop instead of asyncio
 asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
