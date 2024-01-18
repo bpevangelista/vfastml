@@ -26,5 +26,7 @@ model_params = {
     'attention_mask': generated_tokens.attention_mask,
 }
 
+print(torch.cuda.memory_summary())
+
 output = model.generate(**model_params)
 print(tokenizer.batch_decode(output)[0])
