@@ -39,7 +39,7 @@
 #include <cuda_runtime.h>
 #include <stdint.h>
 #include <stdio.h>
-#include "cutil_math.h"
+#include "cutil_math.cu"
 
 #pragma pack(push, 1)
 struct a2v {
