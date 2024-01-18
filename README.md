@@ -1,8 +1,5 @@
 # kFastML
 
-Goal: One line command for YAML --> Inference Sever generation, docker image
-build and k8s deployment.
-
 ### Architecture:
 
 ![Screenshot](docs/architecture.png)
@@ -59,6 +56,35 @@ async def chat_completions(request: ChatCompletionsRequest):
 
 - Easy serving and training of diverse ML pipelines
 - Horizontal Scalability and Stability with k8s (deploy and forget)
+
+### Next Steps?
+
+No Code! Just YAML &rarr; Inference server docker image and kubernets deployments.
+
+``` YAML
+apis:
+  - path: /v1/chat/completions
+    inputs:
+      - messages: list[dict] | str
+      - model: str
+        optional: true
+    outputs:
+      - choices: list[dict]
+servers:
+  - model:
+      type: text_generation
+      uri: mistralai/Mistral-7B-v0.1
+      device: cuda:0
+      generation_params:
+        top_p: 0.9
+    resources:
+      cpus: 2
+      memory: 16GB
+      gpus: 1
+      gpu_memory: 24GB
+      gpu_cuda_capability: 9.0
+    rpc_port: 6500
+```
 
 ### TODOs:
 
