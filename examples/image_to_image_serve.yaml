@@ -4,7 +4,7 @@ apis:
       - images_uri: list[str]
     outputs:
       - images_uri: list[str]
-serves:
+servers:
   - model:
       type: image-to-image
       uri: wdnet-v1
