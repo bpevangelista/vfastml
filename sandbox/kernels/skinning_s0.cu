@@ -149,29 +149,17 @@ int main() {
     cudaEventCreate(&stop);
 
     cudaEventRecord(start);
-    skinning_kernel<<<block_count, block_size, shared_mem_size>>>(input_vertices, output_vertices);
-    skinning_kernel<<<block_count, block_size, shared_mem_size>>>(input_vertices, output_vertices);
-    skinning_kernel<<<block_count, block_size, shared_mem_size>>>(input_vertices, output_vertices);
-    skinning_kernel<<<block_count, block_size, shared_mem_size>>>(input_vertices, output_vertices);
-    skinning_kernel<<<block_count, block_size, shared_mem_size>>>(input_vertices, output_vertices);
-    skinning_kernel<<<block_count, block_size, shared_mem_size>>>(input_vertices, output_vertices);
-    skinning_kernel<<<block_count, block_size, shared_mem_size>>>(input_vertices, output_vertices);
-    skinning_kernel<<<block_count, block_size, shared_mem_size>>>(input_vertices, output_vertices);
-    skinning_kernel<<<block_count, block_size, shared_mem_size>>>(input_vertices, output_vertices);
-    skinning_kernel<<<block_count, block_size, shared_mem_size>>>(input_vertices, output_vertices);
-    skinning_kernel<<<block_count, block_size, shared_mem_size>>>(input_vertices, output_vertices);
-    skinning_kernel<<<block_count, block_size, shared_mem_size>>>(input_vertices, output_vertices);
-    skinning_kernel<<<block_count, block_size, shared_mem_size>>>(input_vertices, output_vertices);
-    skinning_kernel<<<block_count, block_size, shared_mem_size>>>(input_vertices, output_vertices);
-    skinning_kernel<<<block_count, block_size, shared_mem_size>>>(input_vertices, output_vertices);
-    skinning_kernel<<<block_count, block_size, shared_mem_size>>>(input_vertices, output_vertices);
+    int32_t kernel_count = 16;
+    for (int32_t i=0; i < kernel_count; ++i) {
+        skinning_kernel<<<block_count, block_size, shared_mem_size>>>(input_vertices, output_vertices);
+    }
     cudaEventRecord(stop);
 
     cudaDeviceSynchronize();
 
     float elapsedMs = 0.0f;
     cudaEventElapsedTime(&elapsedMs, start, stop);
-    printf("elapsed_time_ms: %.3fms\n", elapsedMs/16.0f);
+    printf("elapsed_time_ms: %.3fms\n", elapsedMs/(float)kernel_count);
 
     cudaFree(input_vertices);
     cudaFree(output_vertices);
