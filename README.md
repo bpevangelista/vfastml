@@ -14,7 +14,7 @@ python -m prebuilt_apps.openai.model_server # run on bash 2
 ### Writing Your Own Apps
 ``` python
 # Model Server
-from kfastml.models_servers.model_server_text_hf import TextGenerationModelServerHF
+from vfastml.models_servers.model_server_text_hf import TextGenerationModelServerHF
 
 model_server = TextGenerationModelServerHF(
     model_type='text_generation',
@@ -29,8 +29,8 @@ model_server.run()
 ```
 ``` python
 # API Server
-from kfastml.engine.dispatch_requests import TextGenerationReq
-from kfastml.entrypoints.api_server import FastMLServer as ml_server
+from vfastml.engine.dispatch_requests import TextGenerationReq
+from vfastml.entrypoints.api_server import FastMLServer as ml_server
 
 @ml_server.app.post(path='/v1/chat/completions')
 async def chat_completions(request: ChatCompletionsRequest):

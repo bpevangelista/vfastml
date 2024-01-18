@@ -2,9 +2,9 @@ import argparse
 
 from pydantic import BaseModel
 
-from kfastml.engine.dispatch_requests import ImageToImageReq
-from kfastml.entrypoints.api_server import FastMLServer as ml_server
-from kfastml.utils import api
+from vfastml.engine.dispatch_requests import ImageToImageReq
+from vfastml.entrypoints.api_server import FastMLServer as ml_server
+from vfastml.utils import api
 
 
 class ImageCleanupRequest(BaseModel):

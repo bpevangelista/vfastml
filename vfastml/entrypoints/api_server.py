@@ -5,8 +5,8 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.responses import Response
 
-from kfastml import log
-from kfastml.engine.dispatch_engine import AsyncDispatchEngine
+from vfastml import log
+from vfastml.engine.dispatch_engine import AsyncDispatchEngine
 
 
 def app_startup():

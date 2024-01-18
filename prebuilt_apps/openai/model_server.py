@@ -2,7 +2,7 @@ import argparse
 
 import torch
 
-from kfastml.models_servers.model_server_text_hf import TextGenerationModelServerHF
+from vfastml.models_servers.model_server_text_hf import TextGenerationModelServerHF
 
 
 def handle_args():

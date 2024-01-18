@@ -7,13 +7,13 @@ import torch
 import uvloop
 import zmq.asyncio
 
-from kfastml import log
-from kfastml.engine.dispatch_requests import BaseDispatchRequest, DispatchRequestResult, \
+from vfastml import log
+from vfastml.engine.dispatch_requests import BaseDispatchRequest, DispatchRequestResult, \
     TextGenerationReq, ImageToImageReq
-from kfastml.errors import UserError, InternalServerError
-from kfastml.utils import DEFAULT_API_SERVER_RPC_PORT, DEFAULT_MODEL0_SERVER_RPC_PORT
+from vfastml.errors import UserError, InternalServerError
+from vfastml.utils import DEFAULT_API_SERVER_RPC_PORT, DEFAULT_MODEL0_SERVER_RPC_PORT
 # noinspection PyProtectedMember
-from kfastml.utils import _is_package_available
+from vfastml.utils import _is_package_available
 
 # Use uvloop instead of asyncio
 asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())

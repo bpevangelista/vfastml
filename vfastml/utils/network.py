@@ -7,7 +7,7 @@ from typing import Optional
 import requests
 import zmq
 
-from kfastml import log
+from vfastml import log
 
 
 def get_unused_network_ports(count: int, start_range: int = 8000, exclude_map: dict = None) -> list[int]:

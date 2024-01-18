@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 
-from kfastml.engine.dispatch_requests import ImageToImageReq
-from kfastml.models_servers.model_server import ModelServer
+from vfastml.engine.dispatch_requests import ImageToImageReq
+from vfastml.models_servers.model_server import ModelServer
 
 
 class ImageToImageModelServer(ModelServer, ABC):

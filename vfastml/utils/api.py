@@ -3,7 +3,7 @@ from datetime import datetime
 
 from fastapi.responses import JSONResponse
 
-from kfastml.engine.dispatch_requests import DispatchRequestResult
+from vfastml.engine.dispatch_requests import DispatchRequestResult
 
 
 def gen_request_id(api_name: str) -> str:

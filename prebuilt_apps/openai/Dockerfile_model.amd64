@@ -35,7 +35,7 @@ RUN curl -L -o ~/mambaforge.sh https://github.com/conda-forge/miniforge/releases
  && /opt/conda/bin/conda clean -ya
 
 WORKDIR /app
-COPY kfastml kfastml
+COPY vfastml vfastml
 COPY deployments/text_generation/api/model_server_app.py .
 
 RUN pip install -r requirements.txt

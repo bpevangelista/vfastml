@@ -37,5 +37,5 @@ class DefaultLogger(logging.Logger):
         self.handler.setLevel(new_log_level)
 
 
-log = DefaultLogger('kfastml')
+log = DefaultLogger('vfastml')
 log.handler.setLevel(logging.INFO)

@@ -11,10 +11,10 @@ import torch.nn.functional as F
 from PIL import Image
 from torch.profiler import profile, record_function, ProfilerActivity
 
-from kfastml import log
-from kfastml.models_servers.model_server_image import ImageToImageModelServer
-from kfastml.utils import print_model_parameters
-from kfastml.utils.network import download_uris_async
+from vfastml import log
+from vfastml.models_servers.model_server_image import ImageToImageModelServer
+from vfastml.utils import print_model_parameters
+from vfastml.utils.network import download_uris_async
 
 s3 = boto3.client("s3")
 BUCKET_NAME = ''

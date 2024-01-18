@@ -1,6 +1,6 @@
 from typing import Literal
 
-from kfastml.errors import ErrorResult
+from vfastml.errors import ErrorResult
 
 
 class DispatchRequestResult:

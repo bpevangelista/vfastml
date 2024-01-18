@@ -3,9 +3,9 @@ from typing import Literal
 
 from pydantic import BaseModel
 
-import kfastml.utils.api as api_utils
-from kfastml.engine.dispatch_requests import TextGenerationReq, TextGenerationMessage
-from kfastml.entrypoints.api_server import FastMLServer as ml_server
+import vfastml.utils.api as api_utils
+from vfastml.engine.dispatch_requests import TextGenerationReq, TextGenerationMessage
+from vfastml.entrypoints.api_server import FastMLServer as ml_server
 
 
 class ChatCompletionsMessage(BaseModel):
