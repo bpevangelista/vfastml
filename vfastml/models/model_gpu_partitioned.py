@@ -15,10 +15,22 @@ class ModelLayersPartition:
     layers: list[torch.nn.Module]
 
 
-class MistralModelSingleGpuPartitioned:
+class MistralModelSingleGpuPartitionedConfig:
+    bos_token_id = 1
+    eos_token_id = 2
+    pad_token_id = 2
+
+
+class MistralModelSingleGpuPartitioned(nn.Module):
     def __init__(self, header: ModelHeaderPartition, blocks: list[ModelLayersPartition]):
+        super().__init__()
         self.header = header
         self.blocks = blocks
+
+    def forward(self,
+                input_ids: torch.Tensor,
+                attention_mask: torch.Tensor):
+        pass
 
     @staticmethod
     #def from_hf(mistral: MistralForCausalLM):
@@ -42,3 +54,7 @@ class MistralModelSingleGpuPartitioned:
             header=header_block,
             blocks=layers_blocks,
         )
+
+    @staticmethod
+    def from_pretrained(path: str):
+        pass
