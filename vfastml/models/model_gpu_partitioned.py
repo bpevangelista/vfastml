@@ -1,3 +1,5 @@
+from typing import Literal
+
 import torch
 import torch.nn as nn
 from transformers import DynamicCache, LogitsProcessorList, StoppingCriteriaList, PreTrainedModel
@@ -33,11 +35,13 @@ class MistralModelSingleGpuPartitioned(nn.Module):
                  header: ModelHeaderPartition,
                  blocks: list[ModelLayersPartition],
                  device: str,
+                 attn_implementation: Literal['sdpa', 'flash_attention_2', 'manual']
                  ):
         super(MistralModelSingleGpuPartitioned, self).__init__()
         self.header = header
         self.blocks = nn.ModuleList(blocks)
         self.device = device
+        self.attn_implementation = attn_implementation
 
     def forward(self,
                 input_ids: torch.Tensor,
@@ -123,10 +127,17 @@ class MistralModelSingleGpuPartitioned(nn.Module):
             lm_norm=mistral_lm.model.norm,
         )
 
+        attn_implementation = {
+            'sdpa': 'sdpa',
+            'flash_attention_2': 'flash_attention_2',
+            'eager': 'manual',
+        }.get(mistral_lm.model.config._attn_implementation, 'manual')
+
         return MistralModelSingleGpuPartitioned(
             header=header_block,
             blocks=layers_blocks,
             device=device,
+            attn_implementation=attn_implementation,
         )
 
     @staticmethod
