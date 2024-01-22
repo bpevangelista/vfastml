@@ -1,21 +1,25 @@
-from dataclasses import dataclass
-
 import torch
 import torch.nn as nn
 from transformers import DynamicCache, LogitsProcessorList, StoppingCriteriaList, PreTrainedModel
 from transformers.modeling_attn_mask_utils import _prepare_4d_causal_attention_mask
 
 
-@dataclass
-class ModelHeaderPartition:
-    vocab_embedding: nn.Embedding
-    lm_head: nn.Linear
-    lm_norm: nn.Linear
+class ModelHeaderPartition(nn.Module):
+    def __init__(self,
+                 vocab_embedding: nn.Embedding,
+                 lm_head: nn.Linear,
+                 lm_norm: nn.Module,
+                 ):
+        super(ModelHeaderPartition, self).__init__()
+        self.vocab_embedding = vocab_embedding
+        self.lm_head = lm_head
+        self.lm_norm = lm_norm
 
 
-@dataclass
-class ModelLayersPartition:
-    layers: list[torch.nn.Module]
+class ModelLayersPartition(nn.Module):
+    def __init__(self, layers: list[nn.Module]):
+        super(ModelLayersPartition, self).__init__()
+        self.layers = nn.ModuleList(layers)
 
 
 class MistralModelSingleGpuPartitionedConfig:
@@ -30,9 +34,9 @@ class MistralModelSingleGpuPartitioned(nn.Module):
                  blocks: list[ModelLayersPartition],
                  device: str,
                  ):
-        super().__init__()
+        super(MistralModelSingleGpuPartitioned, self).__init__()
         self.header = header
-        self.blocks = blocks
+        self.blocks = nn.ModuleList(blocks)
         self.device = device
 
     def forward(self,
