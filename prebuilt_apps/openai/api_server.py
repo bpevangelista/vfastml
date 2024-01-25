@@ -16,6 +16,22 @@ class ChatCompletionsMessage(BaseModel):
 class ChatCompletionsRequest(BaseModel):
     model: str
     messages: list[ChatCompletionsMessage] | str
+    frequency_penalty: float|None = 0.0
+    max_tokens: int|None = 2048
+    n: int|None = 1
+    stream: bool|None = False
+    temperature: int|None = 1.0
+    top_p: int|None = 1.0
+    user: str|None
+    logit_bias: dict|None = None            # NotImplemented
+    logprobs: bool|None = None              # NotImplemented
+    top_logprobs: bool|None = None          # NotImplemented
+    presence_penalty: int|None = None       # NotImplemented
+    response_format: object|None = None     # NotImplemented
+    seed: int|None = None                   # NotImplemented
+    stop: str|list|None = None              # NotImplemented
+    tools: list|None = None                 # NotImplemented
+    tool_choice: str|object|None = None     # NotImplemented
 
 
 @ml_server.app.post(path='/v1/chat/completions', status_code=200)
