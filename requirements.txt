@@ -1,3 +1,5 @@
+accelerate
+bitsandbytes
 fastapi~=0.103.0
 packaging
 pydantic~=2.3.0

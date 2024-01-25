@@ -25,6 +25,9 @@ class ModelLayersPartition(nn.Module):
         super(ModelLayersPartition, self).__init__()
         self.layers = nn.ModuleList(layers)
 
+    def pin_memory(self):
+        for layer in self.layers:
+            layer.pin_memory()
 
 class MistralModelSingleGpuPartitionedConfig:
     bos_token_id = 1
@@ -45,8 +48,18 @@ class MistralModelSingleGpuPartitioned(nn.Module):
         self.device = device
         self.attn_implementation = attn_implementation
 
+        # Pin all blocks and move all but first to CPU
+        """
+        for i in range(len(self.blocks)):
+            self.blocks[i] = self.blocks[i].pin_memory()
+            if i == 0:
+                self.blocks[i] = self.blocks[i].to(self.device)
+            else:
+                self.blocks[i] = self.blocks[i].cpu()
+        """
 
-    def _prepare_inputs(
+
+    def _skip_kv_cache_inputs(
             self,
             input_ids: torch.Tensor,
             attention_mask_2d: torch.Tensor,
@@ -82,18 +95,17 @@ class MistralModelSingleGpuPartitioned(nn.Module):
         eos_token_id_tensor = torch.tensor([eos_token_id]).to(self.device)
 
         batch_count, seq_length = input_ids.shape
-        attention_mask_2d = attention_mask
         unfinished_batches = torch.ones(batch_count, dtype=torch.long, device=self.device)
+        attention_mask_2d = attention_mask
 
         has_finished = False
         while not has_finished:
-            unseen_input_ids, unseen_position_ids = self._prepare_inputs(input_ids, attention_mask_2d, past_kv_cache)
+            unseen_input_ids, unseen_position_ids = self._skip_kv_cache_inputs(input_ids, attention_mask_2d, past_kv_cache)
             batch_count, seq_length = unseen_input_ids.shape
             hidden_states = self.header.vocab_embedding(unseen_input_ids)
 
-            attention_mask = attention_mask_2d
             if self.attn_implementation == 'flash_attention_2':
-                attention_mask = attention_mask if (0 in attention_mask) else None
+                attention_mask = attention_mask_2d if (0 in attention_mask_2d) else None
             else:
                 if self.attn_implementation == 'sdpa':
                     mask_prepare_func = _prepare_4d_causal_attention_mask_for_sdpa
@@ -101,7 +113,7 @@ class MistralModelSingleGpuPartitioned(nn.Module):
                     mask_prepare_func =_prepare_4d_causal_attention_mask
 
                 attention_mask = mask_prepare_func(
-                    attention_mask=attention_mask,
+                    attention_mask=attention_mask_2d,
                     input_shape=(batch_count, seq_length),
                     inputs_embeds=hidden_states,
                     past_key_values_length=past_kv_cache.get_usable_length(seq_length),
@@ -113,6 +125,7 @@ class MistralModelSingleGpuPartitioned(nn.Module):
 
                 block = gpu_blocks.pop()
                 next_block_idx = (i + 1) % block_count
+                #gpu_blocks.append(self.blocks[next_block_idx].to(self.device))
                 gpu_blocks.append(self.blocks[next_block_idx])
 
                 for layer in block.layers:

@@ -1,3 +1,6 @@
+Multi-Head-Attention CUDA:
+- s0 = vanilla in CUDA
+
 Skinning CUDA:
 - s0 = full vertex_process kernel, per-vertex thread
 - s1 = sharded vertex_process kernel, per-vertex thread
