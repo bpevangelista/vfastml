@@ -17,12 +17,7 @@ def build_json_response(request_id: str, task_result: DispatchRequestResult) -> 
             'id': request_id,
             'created': f'{datetime.now()}',
         }
-
-        if isinstance(task_result.result, dict):
-            response_json.update(task_result.result)
-        else:
-            response_json['result'] = task_result.result
-
+        response_json.update(task_result.result)
     else:
         status_code = task_result.error.status_code
         response_json = task_result.error.error
