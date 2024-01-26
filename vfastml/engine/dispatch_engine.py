@@ -8,7 +8,7 @@ import zmq.asyncio
 from vfastml import log
 from vfastml.engine.dispatch_requests import BaseDispatchRequest, DispatchRequestResult
 from vfastml.errors import InternalServerError
-from vfastml.utils import DEFAULT_API_SERVER_RPC_PORT, DEFAULT_MODEL0_SERVER_RPC_PORT, api as api_utils
+from vfastml.utils import DEFAULT_API_SERVER_RPC_PORT, DEFAULT_MODEL0_SERVER_RPC_PORT
 
 # Use uvloop instead of asyncio
 asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
@@ -72,13 +72,12 @@ class AsyncDispatchEngine:
 
             await asyncio.sleep(1)
 
-    def dispatch_err(self, request: BaseDispatchRequest) -> DispatchEngineTask:
+    def _dispatch(self, request: BaseDispatchRequest) -> DispatchEngineTask:
         if request.request_id in self._id_to_task_map:
             raise InternalServerError()
 
         dispatch_task = DispatchEngineTask(request.request_id)
         self._id_to_task_map[request.request_id] = dispatch_task
-
         self.push_socket.send_pyobj(request)
 
         return dispatch_task
@@ -86,13 +85,13 @@ class AsyncDispatchEngine:
     def dispatch(self, request: BaseDispatchRequest) -> DispatchEngineTask:
         # noinspection PyBroadException
         try:
-            task = self.dispatch_err(request)
+            task = self._dispatch(request)
         except:
             log.error(traceback.format_exc())
             task = DispatchEngineTask(request.request_id)
             # noinspection PyProtectedMember
             task._set_finished(
-                api_utils.build_request_error(request.request_id, InternalServerError())
+                DispatchRequestResult.from_exception(request.request_id, InternalServerError())
             )
         return task
 
