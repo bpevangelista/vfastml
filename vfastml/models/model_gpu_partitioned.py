@@ -4,6 +4,7 @@ import torch
 import torch.nn as nn
 from transformers import DynamicCache, LogitsProcessorList, StoppingCriteriaList, PreTrainedModel
 from transformers.generation import MaxLengthCriteria, MaxTimeCriteria
+# noinspection PyProtectedMember
 from transformers.modeling_attn_mask_utils import _prepare_4d_causal_attention_mask_for_sdpa, \
     _prepare_4d_causal_attention_mask
 
@@ -82,13 +83,14 @@ class MistralModelSingleGpuPartitioned(nn.Module):
                 ):
 
         past_kv_cache = DynamicCache()
+        next_decoder_cache = None
         logits_processor = LogitsProcessorList()
 
         max_new_tokens = 1024
         max_tokens = 2048
         stopping_criteria = StoppingCriteriaList([
             MaxLengthCriteria(min(len(input_ids) + max_new_tokens, max_tokens)),
-            # MaxTimeCriteria(60.0), # 1min timeout
+            MaxTimeCriteria(60.0), # 1min timeout
         ])
 
         eos_token_id = MistralModelSingleGpuPartitionedConfig.eos_token_id
@@ -184,6 +186,7 @@ class MistralModelSingleGpuPartitioned(nn.Module):
             lm_norm=mistral_lm.model.norm,
         )
 
+        # noinspection PyProtectedMember
         attn_implementation = {
             'sdpa': 'sdpa',
             'flash_attention_2': 'flash_attention_2',
