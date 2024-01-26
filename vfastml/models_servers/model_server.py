@@ -24,8 +24,8 @@ class ModelServer(ABC):
                  model_type: str,
                  model_uri: str,
                  model_device: str = 'auto',
-                 model_load_kwargs: dict = None,
-                 model_forward_kwargs: dict = None,
+                 model_load_kwargs: dict | None = None,
+                 model_forward_kwargs: dict | None = None,
 
                  api_rpc_port: int = DEFAULT_API_SERVER_RPC_PORT,
                  model_rpc_port: int = DEFAULT_MODEL0_SERVER_RPC_PORT,
