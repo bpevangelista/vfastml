@@ -3,6 +3,7 @@ import argparse
 from pydantic import BaseModel
 
 from vfastml.engine.dispatch_requests import ImageToImageReq
+# noinspection PyPep8Naming
 from vfastml.entrypoints.api_server import FastMLServer as ml_server
 from vfastml.utils import api
 

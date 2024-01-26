@@ -7,6 +7,7 @@ import boto3
 import joblib
 import numpy as np
 import torch
+# noinspection PyPep8Naming
 import torch.nn.functional as F
 from PIL import Image
 from torch.profiler import profile, record_function, ProfilerActivity

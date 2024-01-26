@@ -16,6 +16,7 @@
 # limitations under the License.
 
 import torch
+# noinspection PyPep8Naming
 import torch.nn.functional as F
 from torch import nn
 
