@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from typing import Literal
 
 from vfastml.errors import ErrorResult
@@ -31,25 +32,44 @@ class BaseDispatchRequest:
         self.request_id = request_id
 
 
+@dataclass
 class TextGenerationMessage:
-    def __init__(self, role: Literal['system', 'user', 'assistant'], content: str):
-        self.role = role
-        self.content = content
+    role: Literal['system', 'user', 'assistant']
+    content: str
 
+
+@dataclass
+class TextGenerationForward:
+    # Generation config
+    min_tokens: int|None = None
+    max_tokens: int|None = None
+    max_time: float|None = None
+    num_generations: int = 1
+    # Token generation config
+    seed: int|None = 0.0
+    repetition_penalty: float|None = 1.0
+    temperature: float|None = 1.0
+    top_p: float|None = 1.0
+    logit_bias: dict[int, float]|None = None
+    # TODO no_repeat_size, bad_words_ids, force_words_ids
+    # Options
+    output_scores: bool = False
+    stream: bool = False
+    use_cache: bool = True
 
 class TextGenerationReq(BaseDispatchRequest):
     def __init__(self,
                  request_id: str,
+                 messages: str | list[TextGenerationMessage],
+                 forward_params: TextGenerationForward,
                  model_uri: str,
                  model_adapter_uri: str | None = None,
-                 messages: str | list[TextGenerationMessage] = None,
-                 extra_params: dict | None = None,
                  ):
         super().__init__(request_id)
+        self.messages = messages
+        self.forward_params = forward_params
         self.model_uri = model_uri
         self.model_adapter_uri = model_adapter_uri
-        self.messages = messages
-        self.extra_params = extra_params
 
 
 class ImageToImageReq(BaseDispatchRequest):
@@ -57,9 +77,9 @@ class ImageToImageReq(BaseDispatchRequest):
                  request_id: str,
                  model_uri: str,
                  images: list[str | bytes],
-                 extra_params: dict | None = None,
+                 forward_params: dict | None = None,
                  ):
         super().__init__(request_id)
         self.model_uri = model_uri
         self.images = images
-        self.extra_params = extra_params
+        self.forward_params = forward_params
