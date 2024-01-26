@@ -1,37 +1,12 @@
 import argparse
-from typing import Literal
-
-from pydantic import BaseModel
 
 import vfastml.utils.api as api_utils
-from vfastml.engine.dispatch_requests import TextGenerationReq, TextGenerationMessage
+from prebuilt_apps.openai.api_interfaces import ChatCompletionsRequest
+from vfastml.engine.dispatch_requests import TextGenerationReq, TextGenerationMessage, TextGenerationForward
+# noinspection PyPep8Naming
 from vfastml.entrypoints.api_server import FastMLServer as ml_server
 
-
-class ChatCompletionsMessage(BaseModel):
-    role: Literal['system', 'user', 'assistant']
-    content: str
-
-
-class ChatCompletionsRequest(BaseModel):
-    model: str
-    messages: list[ChatCompletionsMessage] | str
-    frequency_penalty: float|None = 0.0
-    max_tokens: int|None = 2048
-    n: int|None = 1
-    stream: bool|None = False
-    temperature: int|None = 1.0
-    top_p: int|None = 1.0
-    user: str|None
-    logit_bias: dict|None = None            # NotImplemented
-    logprobs: bool|None = None              # NotImplemented
-    top_logprobs: bool|None = None          # NotImplemented
-    presence_penalty: int|None = None       # NotImplemented
-    response_format: object|None = None     # NotImplemented
-    seed: int|None = None                   # NotImplemented
-    stop: str|list|None = None              # NotImplemented
-    tools: list|None = None                 # NotImplemented
-    tool_choice: str|object|None = None     # NotImplemented
+REQUEST_GENERATION_TIMEOUT_SEC = 60.0
 
 
 @ml_server.app.post(path='/v1/chat/completions', status_code=200)
@@ -48,12 +23,28 @@ async def chat_completions(request: ChatCompletionsRequest):
     messages = request.messages if isinstance(request.messages, str) else \
         [TextGenerationMessage(msg.role, msg.content) for msg in request.messages]
 
+    forward_params = TextGenerationForward(
+        max_tokens=request.max_tokens,
+        num_generations=request.n,
+        seed=request.seed,
+        repetition_penalty = request.frequency_penalty,
+        temperature = request.temperature,
+        top_p = request.top_p,
+        logit_bias = request.logit_bias,
+        output_scores = request.logprobs,
+        stream=request.stream,
+        max_time=REQUEST_GENERATION_TIMEOUT_SEC,
+        use_cache=True,
+    )
+
     dispatch_task = ml_server.dispatch_engine.dispatch(
         TextGenerationReq(
             request_id=request_id,
+            messages=messages,
+            forward_params=forward_params,
             model_uri=selected_model['model_uri'],
             model_adapter_uri=None,
-            messages=messages))
+        ))
     task_result = await dispatch_task.get_result()
 
     return api_utils.build_json_response(request_id, task_result)
