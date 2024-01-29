@@ -5,7 +5,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, TextStreamer
 from transformers.utils import is_flash_attn_2_available
 
 from vfastml import log
-from vfastml.engine.dispatch_requests import TextGenerationForward
+from vfastml.engine.dispatch_requests import TextGenerationForward, TextGenerationReq, DispatchRequestResult
 from vfastml.errors import InvalidRequestError
 from vfastml.models_servers.model_server_text import TextGenerationModelServer, TextGenerationMessage, \
     ChatCompletionsResultChoice, ChatCompletionsResultChoiceMessage, ChatCompletionsResult, ChatCompletionsResultUsage
@@ -74,24 +74,38 @@ class TextGenerationModelServerHF(TextGenerationModelServer, ABC):
         return forward_dict
 
 
-    async def _generate_text(self,
-                             request_id: str,
-                             prompt: str | list[TextGenerationMessage],
-                             forward_params: TextGenerationForward) -> ChatCompletionsResult:
-        try:
-            # Llama2 ref: https://github.com/facebookresearch/llama/blob/main/llama/generation.py#L284
-            model_prompt = self.tokenizer.apply_chat_template(prompt, tokenize=False, add_generation_prompt=True)
-            log.debug(f'apply_chat_template {model_prompt}')
-        except Exception as err:
-            raise InvalidRequestError from err
+    async def _generate_text(self, requests: list[TextGenerationReq]):
 
-        tokens = self.tokenizer(model_prompt, return_tensors="pt", add_special_tokens=False, return_length=True)
+        valid_requests: list[TextGenerationReq] = []
+        batch_prompts: list[str] = []
+
+        for request in requests:
+            try:
+                # Llama2 ref: https://github.com/facebookresearch/llama/blob/main/llama/generation.py#L284
+                model_prompt = self.tokenizer.apply_chat_template(request.messages, tokenize=False, add_generation_prompt=True)
+                log.debug(f'apply_chat_template {model_prompt}')
+
+                batch_prompts.append(model_prompt)
+                valid_requests.append(request)
+
+            except Exception as err:
+                log.debug(f'UserError {err}')
+                result = DispatchRequestResult.from_exception(request.request_id, InvalidRequestError(err.__str__()))
+                self._results_queue.append(result)
+
+        if not valid_requests:
+            return
+
+        tokens = self.tokenizer(batch_prompts, return_tensors="pt", padding=True, add_special_tokens=False)
+        batch_input_ids = tokens.input_ids
+        batch_attention_mask = tokens.attention_mask
 
         merged_forward_kwargs = {
             'do_sample': True,
         }
         merged_forward_kwargs.update(self.model_forward_kwargs)
-        merged_forward_kwargs.update(self._openai_to_hf(forward_params))
+        # TODO Support multiple forward parameters
+        merged_forward_kwargs.update(self._openai_to_hf(valid_requests[0].forward_params))
 
         log.debug(f'model.generate')
         output = self.model.generate(
@@ -99,38 +113,44 @@ class TextGenerationModelServerHF(TextGenerationModelServer, ABC):
             return_dict_in_generate = True,
             pad_token_id = self.tokenizer.eos_token_id,
             eos_token_id = self.tokenizer.eos_token_id,
-            input_ids = tokens.input_ids,
-            attention_mask = tokens.attention_mask,
+            input_ids = batch_input_ids,
+            attention_mask = batch_attention_mask,
         )
 
         output_texts = self.tokenizer.batch_decode(output.sequences, skip_special_tokens=True)
         log.debug(f'tokenizer.batch_decode {output_texts}')
 
-        choices = []
-        for i, output_text in enumerate(output_texts):
-            choice = ChatCompletionsResultChoice(
-                finish_reason = 'stop',
-                index = i,
-                message = ChatCompletionsResultChoiceMessage(
-                    role = 'assistant',
-                    content = output_text[(len(model_prompt) - len('<s>') + 1):].strip(),
-                ),
-                logprobs = None,
-            )
-            choices.append(choice)
+        output_index = 0
+        for i, request in enumerate(valid_requests):
+            choices = []
 
-        prompt_tokens = tokens.input_ids.shape[1]
-        total_tokens = output.sequences.shape[0] * output.sequences.shape[1] # TODO Calculate non EOS tokens
-        result = ChatCompletionsResult(
-            choices = choices,
-            model = '',
-            system_fingerprint = '',
-            object = 'chat.completion',
-            usage = ChatCompletionsResultUsage(
-                prompt_tokens = prompt_tokens,
-                completion_tokens = total_tokens - prompt_tokens,
-                total_tokens = total_tokens,
-            )
-        )
+            for j in range(request.forward_params.num_generations):
+                content = output_texts[output_index]
+                choice = ChatCompletionsResultChoice(
+                    finish_reason = 'stop',
+                    index = j,
+                    message = ChatCompletionsResultChoiceMessage(
+                        role = 'assistant',
+                        content = content[(len(batch_prompts[i]) - len('<s>') + 1):].strip(),
+                    ),
+                    logprobs = None,
+                )
+                choices.append(choice)
+                output_index = output_index + 1
 
-        return result
+            prompt_tokens = batch_input_ids.shape[1]
+            total_tokens = output.sequences.shape[0] * output.sequences.shape[1] # TODO Calculate non EOS tokens
+            result = ChatCompletionsResult(
+                choices = choices,
+                model = '',
+                system_fingerprint = '',
+                object = 'chat.completion',
+                usage = ChatCompletionsResultUsage(
+                    prompt_tokens = prompt_tokens,
+                    completion_tokens = total_tokens - prompt_tokens,
+                    total_tokens = total_tokens,
+                )
+            )
+
+            dispatch_result = DispatchRequestResult(request.request_id, result=result.model_dump())
+            self._results_queue.append(dispatch_result)

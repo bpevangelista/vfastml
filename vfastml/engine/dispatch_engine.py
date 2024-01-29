@@ -63,11 +63,11 @@ class AsyncDispatchEngine:
             # noinspection PyProtectedMember
             self._id_to_task_map[req_result.request_id]._set_finished(req_result)
 
-    async def _main_loop(self):
+    async def _is_alive_loop(self):
         log_count = 0
         while self._is_running:
             if log_count % 10 == 0:
-                log.debug('_main_loop')
+                log.debug('_is_alive_loop')
             log_count += 1
 
             await asyncio.sleep(1)
@@ -105,4 +105,4 @@ class AsyncDispatchEngine:
         self._event_loop = event_loop or asyncio.get_event_loop()
 
         self._event_loop.create_task(self._rpc_loop())
-        self._event_loop.create_task(self._main_loop())
+        self._event_loop.create_task(self._is_alive_loop())
