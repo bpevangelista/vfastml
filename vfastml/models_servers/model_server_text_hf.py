@@ -7,8 +7,8 @@ from transformers.utils import is_flash_attn_2_available
 from vfastml import log
 from vfastml.engine.dispatch_requests import TextGenerationForward, TextGenerationReq, DispatchRequestResult
 from vfastml.errors import InvalidRequestError
-from vfastml.models_servers.model_server_text import TextGenerationModelServer, TextGenerationMessage, \
-    ChatCompletionsResultChoice, ChatCompletionsResultChoiceMessage, ChatCompletionsResult, ChatCompletionsResultUsage
+from vfastml.models_servers.model_server_text import TextGenerationModelServer, ChatCompletionsResultChoice, \
+    ChatCompletionsResultChoiceMessage, ChatCompletionsResult, ChatCompletionsResultUsage
 
 
 class TextGenerationModelServerHF(TextGenerationModelServer, ABC):
@@ -20,6 +20,7 @@ class TextGenerationModelServerHF(TextGenerationModelServer, ABC):
     async def _load_model(self):
         self.tokenizer = AutoTokenizer.from_pretrained(
             self.model_uri,
+            padding_side='left',
             trust_remote_code=True,
         )
         self.tokenizer.pad_token = self.tokenizer.eos_token
@@ -89,14 +90,14 @@ class TextGenerationModelServerHF(TextGenerationModelServer, ABC):
                 valid_requests.append(request)
 
             except Exception as err:
-                log.debug(f'UserError {err}')
+                log.info(f'UserError {err}')
                 result = DispatchRequestResult.from_exception(request.request_id, InvalidRequestError(err.__str__()))
-                self._results_queue.append(result)
+                await self._results_queue.put(result)
 
         if not valid_requests:
             return
 
-        tokens = self.tokenizer(batch_prompts, return_tensors='pt', padding_side='left', padding=True)
+        tokens = self.tokenizer(batch_prompts, return_tensors='pt', padding=True)
         batch_input_ids = tokens.input_ids
         batch_attention_mask = tokens.attention_mask
 
@@ -153,4 +154,4 @@ class TextGenerationModelServerHF(TextGenerationModelServer, ABC):
             )
 
             dispatch_result = DispatchRequestResult(request.request_id, result=result.model_dump())
-            self._results_queue.append(dispatch_result)
+            await self._results_queue.put(dispatch_result)

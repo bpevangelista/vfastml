@@ -59,7 +59,7 @@ class MistralModelSingleGpuPartitioned(nn.Module):
                 self.blocks[i] = self.blocks[i].cpu()
         """
 
-
+    # noinspection PyMethodMayBeStatic
     def _skip_kv_cache_inputs(
             self,
             input_ids: torch.Tensor,

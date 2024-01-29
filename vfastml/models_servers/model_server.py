@@ -38,15 +38,8 @@ class ModelServer(ABC):
 
         self.api_rpc_port = api_rpc_port
         self.model_rpc_port = model_rpc_port
-
-        self._requests_queue: list[BaseDispatchRequest] = []
-        self._results_queue: list[DispatchRequestResult] = []
-        self._has_requests = asyncio.Event()
-        self._has_results = asyncio.Event()
-        self._requests_queue_not_full = asyncio.Event()
-        self._results_queue_not_full = asyncio.Event()
-        self._requests_queue_not_full.set()
-        self._results_queue_not_full.set()
+        self._requests_queue: asyncio.Queue = asyncio.Queue(maxsize=1024)
+        self._results_queue: asyncio.Queue = asyncio.Queue(maxsize=1024)
 
         self._is_running = False
         self._is_model_loaded = False
@@ -109,59 +102,80 @@ class ModelServer(ABC):
         raise NotImplementedError
 
 
-    async def _send_rpc_result(self, socket_flags: int = 0) -> bool:
-        # noinspection PyBroadException
-        try:
-            if self._results_queue:
-                rpc_result = self._results_queue.pop()
-                await self.push_socket.send_pyobj(rpc_result, flags=socket_flags)
-                return True
-        except Exception:
-            # TODO Lost request, should we somehow retry?
-            log.error(traceback.format_exc())
-            return True
+    async def _get_request_batch_no_wait(self, min_size: int = 1, max_size: int = -1) -> list[BaseDispatchRequest] | None:
+        request_batch: list[BaseDispatchRequest] | None = None
+        assert max_size >= min_size, 'max_size must be >= min_size'
 
-        return False
+        requests_count = self._requests_queue.qsize()
+        if requests_count >= min_size:
+            desired_size = max_size if max_size > 0 else requests_count
+            desired_size = min(desired_size, requests_count)
 
-    async def _recv_rpc_request(self, socket_flags: int = 0) -> bool:
-        # noinspection PyBroadException
-        try:
-            request: BaseDispatchRequest = await self.pull_socket.recv_pyobj(flags=socket_flags)
-            self._requests_queue.append(request)
-        except zmq.Again: # No more messages
-            return False
-        except Exception:
-            # We can't reply because there's no request_id
-            log.error(traceback.format_exc())
-        return True
+            for i in range(desired_size):
+                try:
+                    request = self._requests_queue.get_nowait()
+                    request_batch.append(request)
+                except asyncio.QueueEmpty:
+                    break
+
+        return request_batch
+
+
+    async def _get_request_batch(self, max_size: int = -1) -> list[BaseDispatchRequest]:
+        request = await self._requests_queue.get()
+        request_batch: list[BaseDispatchRequest] = [request]
+
+        if max_size <= 0:
+            more_requests_count = self._requests_queue.qsize()
+        else:
+            # We already fetched one request
+            more_requests_count = min(max_size - 1, self._requests_queue.qsize())
+
+        for i in range(more_requests_count):
+            try:
+                request = self._requests_queue.get_nowait()
+                request_batch.append(request)
+            except asyncio.QueueEmpty:
+                break
+
+        return request_batch
 
 
     async def _rpc_recv_loop(self):
         while self._is_running:
             log.debug(f'_rpc_recv_loop')
-            await self._requests_queue_not_full.wait()
 
-            # Get all requests
-            if await self._recv_rpc_request(): # blocking
-                while len(self._requests_queue) < 256 and await self._recv_rpc_request(zmq.NOBLOCK):
-                    continue
-                if len(self._requests_queue) == 256:
-                    self._requests_queue_not_full.clear()
-                self._has_requests.set()
+            requests = []
+            # noinspection PyBroadException
+            try:
+                request: BaseDispatchRequest = await self.pull_socket.recv_pyobj() # blocking
+                requests.append(request)
+
+                # Queue as many as _requests_queue max size
+                while len(requests) < self._requests_queue.maxsize:
+                    request = await self.pull_socket.recv_pyobj(zmq.NOBLOCK)
+                    requests.append(request)
+            except zmq.Again:
+                pass
+            except Exception:
+                # We can't reply because there's no request_id
+                log.error(traceback.format_exc())
+
+            for request in requests:
+                await self._requests_queue.put(request)
 
 
     async def _rpc_send_loop(self):
         while self._is_running:
             log.debug(f'_rpc_send_loop')
-            await self._has_results.wait()
 
-            # Send all results
-            while await self._send_rpc_result(zmq.NOBLOCK):
-                continue
-            self._has_results.clear()
-
-            if len(self._results_queue) < 256:
-                self._results_queue_not_full.set()
+            # noinspection PyBroadException
+            try:
+                result: DispatchRequestResult = await self._results_queue.get()
+                await self.push_socket.send_pyobj(result)
+            except Exception:
+                # TODO Lost request, should we somehow retry?
+                log.error(traceback.format_exc())
 
 
     async def _rpc_loop(self):

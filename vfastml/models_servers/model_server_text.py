@@ -1,10 +1,12 @@
+import traceback
 from abc import ABC, abstractmethod
 from typing import Literal
 
 from pydantic import BaseModel
 
-from vfastml.engine.dispatch_requests import TextGenerationReq, TextGenerationMessage, TextGenerationForward, \
-    BaseDispatchRequest
+from vfastml import log
+from vfastml.engine.dispatch_requests import TextGenerationReq, DispatchRequestResult
+from vfastml.errors import InternalServerError
 from vfastml.models_servers.model_server import ModelServer
 
 
@@ -44,35 +46,17 @@ class ChatCompletionsResult(BaseModel):
 
 
 class TextGenerationModelServer(ModelServer, ABC):
-    def _requests_queue_copy(self) -> list[TextGenerationReq] | None:
-        requests = self._requests_queue
-        return requests.copy() if len(requests) > 0 and isinstance(requests[0], TextGenerationReq) else None
-
-
-    async def _get_request_batch(self, min_size: int = 1, max_size: int = -1) -> list[TextGenerationReq] | None:
-        result_batch: list[TextGenerationReq] | None = None
-
-        await self._has_requests.wait()
-        requests_count = len(self._requests_queue)
-
-        if requests_count >= min_size:
-            if max_size == -1 or requests_count <= max_size:
-                result_batch = self._requests_queue_copy()
-                self._requests_queue.clear()
-                self._has_requests.clear()
-            else:
-                result_batch = self._requests_queue[:max_size]
-                del self._requests_queue[:max_size]
-
-            self._requests_queue_not_full.set()
-        return result_batch
-
-
     async def _rpc_step(self):
-        requests_batch: list[TextGenerationReq] = await self._get_request_batch(min_size=1, max_size=32)
+        requests_batch: list[TextGenerationReq] = await self._get_request_batch(max_size=32)
         if requests_batch:
-            await self._generate_text(requests_batch)
-            self._has_results.set()
+            # noinspection PyBroadException
+            try:
+                await self._generate_text(requests_batch)
+            except Exception:
+                log.error(traceback.format_exc())
+                for request in requests_batch:
+                    result = DispatchRequestResult.from_exception(request.request_id, InternalServerError())
+                    await self._results_queue.put(result)
 
 
     @abstractmethod
