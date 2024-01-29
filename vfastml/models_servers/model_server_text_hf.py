@@ -96,7 +96,7 @@ class TextGenerationModelServerHF(TextGenerationModelServer, ABC):
         if not valid_requests:
             return
 
-        tokens = self.tokenizer(batch_prompts, return_tensors="pt", padding=True, add_special_tokens=False)
+        tokens = self.tokenizer(batch_prompts, return_tensors='pt', padding_side='left', padding=True)
         batch_input_ids = tokens.input_ids
         batch_attention_mask = tokens.attention_mask
 
