@@ -13,6 +13,7 @@ from PIL import Image
 from torch.profiler import profile, record_function, ProfilerActivity
 
 from vfastml import log
+from vfastml.engine.dispatch_requests import ImageToImageReq, DispatchRequestResult
 from vfastml.models_servers.model_server_image import ImageToImageModelServer
 from vfastml.utils import print_model_parameters
 from vfastml.utils.network import download_uris_async
@@ -74,36 +75,40 @@ def image_to_tensor(image: Image):
 
 
 class ImageToImageModelCleanupServer(ImageToImageModelServer, ABC):
-    async def _image_to_image(self, request_id: str, images: list[str | bytes], **kwargs) -> dict:
+    async def _image_to_image(self, requests: list[ImageToImageReq]):
+        for request in requests:
+            images_futures = download_uris_async(request.images)
 
-        images_futures = download_uris_async(images)
+            src_images_uri: list[str] = []
+            result_images_uri: list[str] = []
+            for image_future in asyncio.as_completed(images_futures):
+                image_uri, image_data = await image_future
+                if image_data is None:
+                    continue
 
-        src_images_uri: list[str] = []
-        result_images_uri: list[str] = []
-        for image_future in asyncio.as_completed(images_futures):
-            image_uri, image_data = await image_future
-            if image_data is None:
-                continue
+                image = Image.open(io.BytesIO(image_data))
+                image_tensor = image_to_tensor(image)
 
-            image = Image.open(io.BytesIO(image_data))
-            image_tensor = image_to_tensor(image)
+                # Any image pre-processing
 
-            # Any image pre-processing
+                with profile(activities=[ProfilerActivity.CPU], profile_memory=False, record_shapes=True) as prof:
+                    with record_function("model"):
+                        with torch.no_grad():
+                            predicted = self.model(image_tensor, **request.forward_params)
 
-            with profile(activities=[ProfilerActivity.CPU], profile_memory=False, record_shapes=True) as prof:
-                with record_function("model"):
-                    with torch.no_grad():
-                        predicted = self.model(image_tensor, **kwargs)
+                print(prof.key_averages().table(sort_by="cpu_time_total", row_limit=20))
 
-            print(prof.key_averages().table(sort_by="cpu_time_total", row_limit=20))
+                src_images_uri.append(upload_to_s3(image_tensor, BUCKET_NAME, f'{image_uri}_original.png'))
+                result_images_uri.append(upload_to_s3(predicted, BUCKET_NAME, f'{image_uri}_predicted.png'))
 
-            src_images_uri.append(upload_to_s3(image_tensor, BUCKET_NAME, f'{image_uri}_original.png'))
-            result_images_uri.append(upload_to_s3(predicted, BUCKET_NAME, f'{image_uri}_predicted.png'))
+            result = {
+                'images_uri': src_images_uri,
+                'cleaned_images_uri': result_images_uri,
+            }
 
-        return {
-            'images_uri': src_images_uri,
-            'cleaned_images_uri': result_images_uri,
-        }
+            dispatch_result = DispatchRequestResult(request.request_id, result=result)
+            await self._results_queue.put(dispatch_result)
+
 
     async def _load_model(self):
         log.info(f'Loading Model {self.model_uri}')

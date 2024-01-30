@@ -75,11 +75,13 @@ class TextGenerationReq(BaseDispatchRequest):
 class ImageToImageReq(BaseDispatchRequest):
     def __init__(self,
                  request_id: str,
-                 model_uri: str,
                  images: list[str | bytes],
-                 forward_params: dict | None = None,
+                 forward_params: dict,
+                 model_uri: str,
+                 model_adapter_uri: str | None = None,
                  ):
         super().__init__(request_id)
-        self.model_uri = model_uri
         self.images = images
         self.forward_params = forward_params
+        self.model_uri = model_uri
+        self.model_adapter_uri = model_adapter_uri
