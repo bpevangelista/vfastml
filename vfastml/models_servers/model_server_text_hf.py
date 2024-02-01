@@ -18,24 +18,29 @@ class TextGenerationModelServerHF(TextGenerationModelServer, ABC):
         self.tokenizer = None
 
     async def _load_model(self):
+        tokenizer_load_kwargs = {
+            'token': self.model_load_kwargs.get('token', None)
+        }
+
         self.tokenizer = AutoTokenizer.from_pretrained(
             self.model_uri,
             padding_side='left',
             trust_remote_code=True,
+            **tokenizer_load_kwargs,
         )
         self.tokenizer.pad_token = self.tokenizer.eos_token
 
-        merged_load_kwargs = {
+        merged_model_load_kwargs = {
             'torch_dtype': torch.float16,
             'attn_implementation': 'flash_attention_2' if is_flash_attn_2_available() else 'sdpa',
         }
-        merged_load_kwargs.update(self.model_load_kwargs)
+        merged_model_load_kwargs.update(self.model_load_kwargs)
 
         self.model = AutoModelForCausalLM.from_pretrained(
             self.model_uri,
             device_map = self.model_device,
             trust_remote_code = True,
-            **merged_load_kwargs,
+            **merged_model_load_kwargs,
         )
 
         self._is_model_loaded = True
@@ -118,7 +123,7 @@ class TextGenerationModelServerHF(TextGenerationModelServer, ABC):
             attention_mask = batch_attention_mask,
         )
 
-        output_texts = self.tokenizer.batch_decode(output.sequences, skip_special_tokens=True)
+        output_texts = self.tokenizer.batch_decode(output.sequences, skip_special_tokens=False)
         log.debug(f'tokenizer.batch_decode {output_texts}')
 
         output_index = 0
@@ -143,7 +148,7 @@ class TextGenerationModelServerHF(TextGenerationModelServer, ABC):
             total_tokens = output.sequences.shape[0] * output.sequences.shape[1] # TODO Calculate non EOS tokens
             result = ChatCompletionsResult(
                 choices = choices,
-                model = '',
+                model = self.model_uri,
                 system_fingerprint = '',
                 object = 'chat.completion',
                 usage = ChatCompletionsResultUsage(
