@@ -137,7 +137,7 @@ class ImageToImageModelCleanupServer(ImageToImageModelServer, ABC):
 def handle_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--device', type=str, default='cpu')
-    parser.add_argument('--loglevel', type=str, default='debug')
+    parser.add_argument('--log_level', type=str, default='debug')
     return parser.parse_args()
 
 

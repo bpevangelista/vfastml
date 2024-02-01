@@ -9,7 +9,7 @@ from vfastml.models_servers.model_server_text_hf import TextGenerationModelServe
 def handle_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--device', type=str, default='cuda')
-    parser.add_argument('--loglevel', type=str, default='debug')
+    parser.add_argument('--log_level', type=str, default='debug')
     return parser.parse_args()
 
 
