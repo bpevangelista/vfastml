@@ -8,10 +8,12 @@ uvicorn[standard]~=0.23.2
 uvloop~=0.19.0
 
 # prebuilt_apps dependencies
-[prebuilt_apps]
 accelerate
 bitsandbytes
 boto3
 numpy
 Pillow
 requests
+
+# optional (ok if any below fail)
+flash-attn
