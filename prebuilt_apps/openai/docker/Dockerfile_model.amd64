@@ -36,9 +36,11 @@ RUN curl -L -o ~/mambaforge.sh https://github.com/conda-forge/miniforge/releases
 
 WORKDIR /app
 COPY vfastml vfastml
-COPY prebuilt_apps prebuilt_apps
+COPY prebuilt_apps/openai prebuilt_apps/openai
+COPY requirements_docker.txt requirements_docker.txt
 
-RUN pip install -r requirements.txt
+RUN pip install -r requirements_docker.txt
+#RUN pip install flash-attn
 
 EXPOSE 8080
 
