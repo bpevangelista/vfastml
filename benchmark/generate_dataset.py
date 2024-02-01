@@ -11,7 +11,7 @@ DATA_FOLDER_PATH: str = './data'
 CACHED_CHAT_COMPLETIONS_PATH: str = os.path.join(DATA_FOLDER_PATH, 'varsize_chat_completions.bin')
 
 @dataclass
-class BenchmarkChatCompletionMessage():
+class BenchmarkChatCompletionMessage:
     prompt: str
     generation_length: int
 
