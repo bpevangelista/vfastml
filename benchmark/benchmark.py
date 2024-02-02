@@ -27,9 +27,9 @@ def load_cached_chat_completions():
 def get_tokenizer(model_uri: str):
     tokenizer = AutoTokenizer.from_pretrained(
         model_uri,
-        padding_side='left',
-        trust_remote_code=True,
-        token=os.environ.get('HF_ACCESS_TOKEN'),
+        padding_side = 'left',
+        trust_remote_code = True,
+        token = os.environ.get('HF_ACCESS_TOKEN'),
     )
     tokenizer.pad_token = tokenizer.eos_token
     return tokenizer
@@ -42,32 +42,33 @@ def benchmark_vllm(args: any,
 
     from vllm import LLM, SamplingParams
     llm = LLM(
-        model=args.model_uri,
-        tokenizer=tokenizer.name_or_path,
-        tokenizer_mode='slow',  # TODO Same across benchmarks, change all to Fast?
+        model = args.model_uri,
+        tokenizer = tokenizer.name_or_path,
+        tokenizer_mode = 'slow',  # TODO Same across benchmarks. Change all to Fast?
         #quantization=quantization,
-        tensor_parallel_size=args.num_gpus,
+        tensor_parallel_size = args.num_gpus,
         dtype = args.dtype,
-        max_model_len=DEFAULT_MAX_SEQ_LENGTH,
-        trust_remote_code=True,
-        token=os.environ.get('HF_ACCESS_TOKEN'),
+        max_model_len = DEFAULT_MAX_SEQ_LENGTH,
+        trust_remote_code = True,
+        #token=os.environ.get('HF_ACCESS_TOKEN'), # TODO Token is not supported. Use huggingface-cli login
     )
 
     # Same logic as vllm bench
     for chat in chat_completions:
         sampling_params = SamplingParams(
-            n=args.num_generations,
-            temperature=1.0,
-            top_p=1.0,
-            use_beam_search=False,
-            ignore_eos=True,
-            max_tokens=chat.generation_length,
+            n = args.num_generations,
+            ignore_eos = True,
+            use_beam_search = False,
+            temperature = 1.0,
+            top_p = 1.0,
+            # Note vllm max_tokens is actually max_new_tokens
+            max_tokens = chat.generation_length - len(chat.prompt),
         )
 
         llm.generate(
-            prompts=chat.prompt,
-            prompt_token_ids=None,
-            sampling_params=sampling_params,
+            prompts = chat.prompt,
+            prompt_token_ids = None,
+            sampling_params = sampling_params,
         )
 
     print('Starting benchmark...')
@@ -95,16 +96,16 @@ def benchmark_vfastml(args: any,
         model_uri = args.model_uri,
         model_device = 'cuda:0',
         model_load_kwargs = {
-            'torch_dtype': torch.float16,
+            'torch_dtype': args.dtype,
             #'load_in_8bit': True,
             'token': os.environ.get('HF_ACCESS_TOKEN'),
         },
         model_forward_kwargs = TextGenerationForward(
             num_generations = args.num_generations,
-            temperature=1.0,
-            top_p=1.0,
+            temperature = 1.0,
+            top_p = 1.0,
         ),
-        log_level='error',
+        log_level = 'info',
     )
 
     # Same logic as vllm bench
@@ -124,7 +125,7 @@ def benchmark_vfastml(args: any,
 
     print('Starting benchmark...')
     start_time = time.time()
-    model_server.run()
+    model_server.run_until_idle()
     end_time = time.time()
     elapsed_time_sec = end_time - start_time
 
@@ -162,10 +163,9 @@ def main():
         raise NotImplementedError
 
     # TODO Count the actual number of tokens generated
-    total_tokens = sum(chat.generation_length for chat in chat_completions)
-    tokens_sec = total_tokens / elapsed_time_sec
+    total_tokens = sum(chat.generation_length -len(chat.prompt) for chat in chat_completions)
 
-    print('results')
-    print(f'  {num_chats} chats, {total_tokens/num_chats} avg_completion_length, {tokens_sec} tokens/s')
+    print('Finished in {elapsed_time_sec}s. Generation Results:')
+    print(f'  {num_chats} chats, {total_tokens/num_chats} avg_gen_length, {total_tokens/elapsed_time_sec} tokens/s')
 
 main()
