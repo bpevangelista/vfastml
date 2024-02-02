@@ -137,7 +137,7 @@ class ImageToImageModelCleanupServer(ImageToImageModelServer, ABC):
 def handle_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('--device', type=str, default='cpu')
-    parser.add_argument('--log_level', type=str, default='debug')
+    parser.add_argument('--log-level', type=str, default='debug')
     return parser.parse_args()
 
 
@@ -147,7 +147,7 @@ if __name__ == '__main__':
     model_server = ImageToImageModelCleanupServer(
         model_type='image_to_image',
         model_uri='wdnet_v0.1',
-        model_device=args.model_device,
+        model_device=args.device,
 
         log_level=args.log_level,
     )

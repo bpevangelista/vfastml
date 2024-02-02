@@ -1,4 +1,5 @@
 # This code is based on MRUIL/WDNet library
+#
 #   WDNet: Watermark-Decomposition Network for Visible Watermark Removal
 #   https://arxiv.org/abs/2012.07616
 #   https://github.com/MRUIL/WDNet
