@@ -190,11 +190,23 @@ class ModelServer(ABC):
                 log.error(traceback.format_exc())
 
 
-    async def _rpc_loop(self):
+    async def _rpc_loop(self, on_idle_exit:bool = False):
         while self._is_running:
             log.debug('_rpc_loop')
 
-            await self._rpc_step()
+            if not self._is_model_loaded:
+                await asyncio.sleep(1)
+                continue
+
+            # noinspection PyBroadException
+            try:
+                await self._rpc_step()
+            except Exception:
+                log.error(traceback.format_exc())
+
+            # Exit if there's no more work
+            if on_idle_exit and self._requests_queue.qsize() == 0:
+                self._is_running = False
 
 
     async def _is_alive_loop(self):
@@ -207,13 +219,19 @@ class ModelServer(ABC):
             await asyncio.sleep(1)
 
 
-    def run(self):
+    def _run(self, on_idle_exit: bool = False):
         assert not self._is_running
-
         self._is_running = True
+        self._event_loop.create_task(self._is_alive_loop())
         self._event_loop.create_task(self._try_load_model())
         self._event_loop.create_task(self._rpc_recv_loop())
         self._event_loop.create_task(self._rpc_send_loop())
-        self._event_loop.create_task(self._rpc_loop())
-        self._event_loop.create_task(self._is_alive_loop())
-        self._event_loop.run_forever()
+        self._event_loop.run_until_complete(self._rpc_loop(on_idle_exit))
+
+
+    def run_forever(self):
+        self._run()
+
+
+    def run_until_idle(self):
+        self._run(on_idle_exit=True)
