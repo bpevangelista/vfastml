@@ -17,6 +17,7 @@ class TextGenerationModelServerHF(TextGenerationModelServer, ABC):
         super().__init__(*args, **kwargs)
         self.tokenizer = None
 
+
     async def _load_model(self):
         tokenizer_load_kwargs = {
             'token': self.model_load_kwargs.get('token', None)
@@ -43,7 +44,6 @@ class TextGenerationModelServerHF(TextGenerationModelServer, ABC):
             **merged_model_load_kwargs,
         )
 
-        self._is_model_loaded = True
 
     def _openai_to_hf(self, forward_params: TextGenerationForward) -> dict:
         forward_dict = forward_params.__dict__
@@ -109,7 +109,7 @@ class TextGenerationModelServerHF(TextGenerationModelServer, ABC):
         merged_forward_kwargs = {
             'do_sample': True,
         }
-        merged_forward_kwargs.update(self.model_forward_kwargs)
+        merged_forward_kwargs.update(self._openai_to_hf(self.model_forward_kwargs))
         # TODO Support multiple forward parameters
         merged_forward_kwargs.update(self._openai_to_hf(valid_requests[0].forward_params))
 
