@@ -102,6 +102,18 @@ class ModelServer(ABC):
         raise NotImplementedError
 
 
+    async def _try_load_model(self):
+        # noinspection PyBroadException
+        try:
+            await self._load_model()
+            self._is_model_loaded = True
+        except Exception:
+            log.error(traceback.format_exc())
+            # Exit if we can't load a model
+            self._is_model_loaded = False
+            self._is_running = False
+
+
     async def _get_request_batch_no_wait(self, min_size: int = 1, max_size: int = -1) -> list[BaseDispatchRequest] | None:
         request_batch: list[BaseDispatchRequest] | None = None
         assert max_size >= min_size, 'max_size must be >= min_size'
@@ -126,12 +138,12 @@ class ModelServer(ABC):
         request_batch: list[BaseDispatchRequest] = [request]
 
         if max_size <= 0:
-            more_requests_count = self._requests_queue.qsize()
+            get_count = self._requests_queue.qsize()
         else:
             # We already fetched one request
-            more_requests_count = min(max_size - 1, self._requests_queue.qsize())
+            get_count = min(max_size - 1, self._requests_queue.qsize())
 
-        for i in range(more_requests_count):
+        for i in range(get_count):
             try:
                 request = self._requests_queue.get_nowait()
                 request_batch.append(request)
@@ -180,7 +192,7 @@ class ModelServer(ABC):
 
     async def _rpc_loop(self):
         while self._is_running:
-            log.debug(f'_rpc_loop')
+            log.debug('_rpc_loop')
 
             await self._rpc_step()
 
@@ -199,7 +211,7 @@ class ModelServer(ABC):
         assert not self._is_running
 
         self._is_running = True
-        self._event_loop.create_task(self._load_model())
+        self._event_loop.create_task(self._try_load_model())
         self._event_loop.create_task(self._rpc_recv_loop())
         self._event_loop.create_task(self._rpc_send_loop())
         self._event_loop.create_task(self._rpc_loop())
