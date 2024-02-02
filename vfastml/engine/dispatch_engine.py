@@ -103,6 +103,5 @@ class AsyncDispatchEngine:
 
         self._is_running = True
         self._event_loop = event_loop or asyncio.get_event_loop()
-
-        self._event_loop.create_task(self._rpc_loop())
         self._event_loop.create_task(self._is_alive_loop())
+        self._event_loop.create_task(self._rpc_loop())
