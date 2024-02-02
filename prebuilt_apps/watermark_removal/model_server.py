@@ -151,4 +151,4 @@ if __name__ == '__main__':
 
         log_level=args.log_level,
     )
-    model_server.run()
+    model_server.run_forever()

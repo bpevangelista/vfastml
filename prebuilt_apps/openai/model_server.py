@@ -20,8 +20,8 @@ if __name__ == '__main__':
 
     model_server = TextGenerationModelServerHF(
         model_type = 'text_generation',
-        #model_uri='mistralai/Mistral-7B-v0.1',
-        model_uri='meta-llama/Llama-2-7b-chat-hf',
+        model_uri='mistralai/Mistral-7B-v0.1',
+        #model_uri='meta-llama/Llama-2-7b-chat-hf',
         model_device = args.device,
         model_load_kwargs = {
             'torch_dtype': torch.float16,
@@ -33,4 +33,4 @@ if __name__ == '__main__':
         },
         log_level=args.log_level,
     )
-    model_server.run()
+    model_server.run_forever()

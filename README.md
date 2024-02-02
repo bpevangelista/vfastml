@@ -25,7 +25,7 @@ model_server = TextGenerationModelServerHF(
     },
     log_level='debug',
 )
-model_server.run()
+model_server.run_forever()
 ```
 ``` python
 # API Server
@@ -95,3 +95,6 @@ servers:
 
 - Wait model_server before REST API available
 - Support api_server to N-models router (for multi-engine support)
+
+### Tids and Bits:
+sudo apt-get install -y nvidia-container-toolkit
