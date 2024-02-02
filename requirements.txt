@@ -1,3 +1,5 @@
+accelerate
+bitsandbytes
 fastapi~=0.103.0
 packaging
 pydantic~=2.3.0
@@ -8,8 +10,6 @@ uvicorn[standard]~=0.23.2
 uvloop~=0.19.0
 
 # prebuilt_apps dependencies
-accelerate
-bitsandbytes
 boto3
 numpy
 Pillow
