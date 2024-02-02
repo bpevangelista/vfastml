@@ -34,7 +34,7 @@ def wget_url(url: str):
     file_path = os.path.join(DATA_FOLDER_PATH, os.path.basename(url))
     if not os.path.exists(file_path):
         try:
-            subprocess.run(['wget', url, '-P', file_path])
+            subprocess.run(['wget', url, '-P', DATA_FOLDER_PATH])
         except Exception as err:
             print(f'Failed to wget url: {err}')
 
@@ -63,8 +63,8 @@ def gen_variable_size_chat_completions(file_path: str,
             continue
 
         # Trying similar logic to vllm benchmark
-        prompt = chat['conversations'][0]
-        reply = chat['conversations'][1]
+        prompt = chat['conversations'][0]['value']
+        reply = chat['conversations'][1]['value']
         full_seq_length = len(prompt) + len(reply)
         if full_seq_length > max_seq_length:
             continue
