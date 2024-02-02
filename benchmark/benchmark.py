@@ -13,7 +13,8 @@ DEFAULT_MAX_SEQ_LENGTH = 2048
 @dataclass
 class BenchmarkChatCompletionMessage:
     prompt: str
-    generation_length: int
+    prompt_num_tokens: int
+    reply_num_tokens: int
 
 
 def load_cached_chat_completions():
@@ -27,7 +28,6 @@ def load_cached_chat_completions():
 def get_tokenizer(model_uri: str):
     tokenizer = AutoTokenizer.from_pretrained(
         model_uri,
-        padding_side = 'left',
         trust_remote_code = True,
         token = os.environ.get('HF_ACCESS_TOKEN'),
     )
@@ -62,11 +62,12 @@ def benchmark_vllm(args: any,
             temperature = 1.0,
             top_p = 1.0,
             # Note vllm max_tokens is actually max_new_tokens
-            max_tokens = chat.generation_length - len(chat.prompt),
+            max_tokens = chat.reply_num_tokens,
         )
 
-        llm.generate(
-            prompts = chat.prompt,
+        # noinspection PyPackageRequirements
+        llm._add_request(
+            prompt = chat.prompt,
             prompt_token_ids = None,
             sampling_params = sampling_params,
         )
@@ -91,12 +92,13 @@ def benchmark_vfastml(args: any,
     from vfastml.engine.dispatch_requests import TextGenerationForward
     from vfastml.engine.dispatch_requests import TextGenerationReq
 
+    torch_dtype = getattr(torch, args.dtype)
     model_server = TextGenerationModelServerHF(
         model_type = 'text_generation',
         model_uri = args.model_uri,
         model_device = 'cuda:0',
         model_load_kwargs = {
-            'torch_dtype': args.dtype,
+            'torch_dtype': torch_dtype,
             #'load_in_8bit': True,
             'token': os.environ.get('HF_ACCESS_TOKEN'),
         },
@@ -114,8 +116,8 @@ def benchmark_vfastml(args: any,
             request_id = 'foobar',
             messages = chat.prompt,
             forward_params = TextGenerationForward(
-                min_tokens=chat.generation_length,
-                max_tokens=chat.generation_length,
+                min_tokens = chat.prompt_num_tokens + chat.reply_num_tokens,
+                max_tokens = chat.prompt_num_tokens + chat.reply_num_tokens,
             ),
             model_uri = args.model_uri,
             model_adapter_uri = None,
@@ -135,7 +137,7 @@ def benchmark_vfastml(args: any,
 def handle_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('benchmark', type=str, default='vfastml',
-                        choices=['vllm', 'vfastml', 'hf'])
+                        choices=['vfastml', 'vllm', 'hf'])
 
     parser.add_argument('--model-uri', type=str, default=DEFAULT_LLM_URI)
     parser.add_argument('--dtype', type=str, default='float16',
@@ -159,13 +161,17 @@ def main():
         elapsed_time_sec = benchmark_vllm(args, chat_completions)
     elif args.benchmark == 'vfastml':
         elapsed_time_sec = benchmark_vfastml(args, chat_completions)
-    else:
+    elif args.benchmark == 'hf':
         raise NotImplementedError
+    else:
+        raise ValueError('benchmark must be one of [vfastml, vllm, hf]')
 
     # TODO Count the actual number of tokens generated
-    total_tokens = sum(chat.generation_length -len(chat.prompt) for chat in chat_completions)
+    total_tokens = sum(chat.reply_num_tokens for chat in chat_completions)
+    avg_gen_tokens = total_tokens/num_chats
+    tokens_per_sec = total_tokens/elapsed_time_sec
 
-    print('Finished in {elapsed_time_sec}s. Generation Results:')
-    print(f'  {num_chats} chats, {total_tokens/num_chats} avg_gen_length, {total_tokens/elapsed_time_sec} tokens/s')
+    print(f'Finished in {elapsed_time_sec:.2f}s. Results:')
+    print(f'  {num_chats} chats, {avg_gen_tokens:.2f} avg tokens/chat, {tokens_per_sec:.2f} tokens/s')
 
 main()
