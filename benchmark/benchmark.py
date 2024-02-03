@@ -1,4 +1,4 @@
-import argparse, os, pickle, sys, time
+import argparse, gc, os, pickle, sys, time
 import asyncio
 
 from dataclasses import dataclass
@@ -33,6 +33,12 @@ def get_tokenizer(model_uri: str):
     )
     tokenizer.pad_token = tokenizer.eos_token
     return tokenizer
+
+
+def _prepare_benchmark():
+    torch.cuda.empty_cache()
+    gc.collect()
+    time.sleep(1)
 
 
 def benchmark_vllm(args: any,
@@ -71,6 +77,9 @@ def benchmark_vllm(args: any,
             prompt_token_ids = None,
             sampling_params = sampling_params,
         )
+
+    # Prepare
+    _prepare_benchmark()
 
     print('Starting benchmark...')
     start_time = time.time()
@@ -125,6 +134,10 @@ def benchmark_vfastml(args: any,
         # noinspection PyProtectedMember
         asyncio.run(model_server._requests_queue.put(request))
 
+    # Prepare
+    asyncio.run(model_server._try_load_model())
+    _prepare_benchmark()
+
     print('Starting benchmark...')
     start_time = time.time()
     model_server.run_until_idle()
@@ -137,7 +150,7 @@ def benchmark_vfastml(args: any,
 def handle_args():
     parser = argparse.ArgumentParser()
     parser.add_argument('benchmark', type=str, default='vfastml',
-                        choices=['vfastml', 'vllm', 'hf'])
+                        choices=['vfastml', 'tgi', 'vllm', 'hf'])
 
     parser.add_argument('--model-uri', type=str, default=DEFAULT_LLM_URI)
     parser.add_argument('--dtype', type=str, default='float16',
@@ -157,10 +170,12 @@ def main():
     chat_completions = chat_completions[:args.max_prompts]
     num_chats = len(chat_completions)
 
-    if args.benchmark == 'vllm':
-        elapsed_time_sec = benchmark_vllm(args, chat_completions)
-    elif args.benchmark == 'vfastml':
+    if args.benchmark == 'vfastml':
         elapsed_time_sec = benchmark_vfastml(args, chat_completions)
+    elif args.benchmark == 'vllm':
+        elapsed_time_sec = benchmark_vllm(args, chat_completions)
+    elif args.benchmark == 'tgi':
+        raise NotImplementedError
     elif args.benchmark == 'hf':
         raise NotImplementedError
     else:
