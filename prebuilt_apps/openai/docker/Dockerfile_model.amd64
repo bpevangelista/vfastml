@@ -1,5 +1,5 @@
-#FROM nvidia/cuda:11.8.0-base-ubuntu20.04 AS base_image
-FROM ubuntu:20.04 AS base_image
+FROM nvidia/cuda:11.7.1-base-ubuntu20.04 AS base_image
+#FROM nvidia/cuda:11.7.1-devel-ubuntu20.04 AS base_image # 2x image size 7GB->14GB
 
 ARG TARGETPLATFORM
 ARG BUILDPLATFORM
@@ -40,7 +40,10 @@ COPY prebuilt_apps/openai prebuilt_apps/openai
 COPY requirements_docker.txt requirements_docker.txt
 
 RUN pip install -r requirements_docker.txt
-#RUN pip install flash-attn
+
+# Flash Attention
+#RUN wget https://github.com/Dao-AILab/flash-attention/releases/download/v2.3.6/flash_attn-2.3.6+cu118torch2.0cxx11abiTRUE-cp311-cp311-linux_x86_64.whl
+#RUN pip install flash_attn-2.3.6+cu118torch2.0cxx11abiTRUE-cp311-cp311-linux_x86_64.whl
 
 EXPOSE 8080
 

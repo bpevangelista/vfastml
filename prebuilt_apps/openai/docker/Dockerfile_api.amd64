@@ -1,5 +1,4 @@
-#FROM nvidia/cuda:11.8.0-base-ubuntu20.04 AS base_image
-FROM ubuntu:20.04 AS base_image
+FROM nvidia/cuda:11.7.1-base-ubuntu20.04 AS base_image
 
 ARG TARGETPLATFORM
 ARG BUILDPLATFORM
