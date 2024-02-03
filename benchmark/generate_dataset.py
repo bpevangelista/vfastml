@@ -73,11 +73,17 @@ def gen_variable_size_chat_completions(file_path: str,
         if len(chat['conversations']) < 2:
             continue
 
-        # Trying similar logic to vllm benchmark
         prompt = chat['conversations'][0]['value']
+        prompt = tokenizer.apply_chat_template([{'role': 'user', 'content': prompt}],
+            tokenize=False, add_generation_prompt=True)
         reply = chat['conversations'][1]['value']
+
         prompt_tokens = len(tokenizer.tokenize(prompt, padding=False))
         reply_tokens = len(tokenizer.tokenize(reply, padding=False))
+
+        # Skip samples with very low generation
+        if reply_tokens < 32:
+            continue
 
         total_tokens = prompt_tokens + reply_tokens
         if total_tokens > args.max_tokens:
