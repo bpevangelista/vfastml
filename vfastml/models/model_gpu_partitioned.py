@@ -65,10 +65,12 @@ class MistralModelSingleGpuPartitioned(nn.Module):
             input_ids: torch.Tensor,
             attention_mask_2d: torch.Tensor,
             kv_cache: DynamicCache) -> tuple[torch.Tensor, torch.Tensor]:
+
+        # Accumulate attention across seq length dim  [0, 0, 1, 1] --> [0, 0, 1, 2]
         position_ids = attention_mask_2d.long().cumsum(-1) - 1
         position_ids.masked_fill_(attention_mask_2d == 0, 1)
 
-        # First run only
+        # Skipped on first run only
         if kv_cache is not None:
             past_length = kv_cache.seen_tokens
             input_ids = input_ids[:, past_length:]
