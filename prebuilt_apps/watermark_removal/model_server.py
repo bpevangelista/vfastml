@@ -61,17 +61,18 @@ def upload_to_s3(data: bytes, bucket: str, object_path: str) -> str | None:
     return f's3://{bucket}/{object_path}'
 
 
-def image_to_tensor(image: Image):
+def pil_image_to_tensor(image: Image):
     # Only support 1bpp or 8bpp
     image_tensor = torch.from_numpy(np.array(image, np.uint8, copy=True))
-    if image.mode == "1":
+    if image.mode == '1':
         image_tensor *= 255
 
     image_channels = len(image.getbands())
-    image_tensor.view(image.height, image.width, image_channels)
-    image_tensor.permute(2, 0, 1).contiguous()
+    image_tensor = image_tensor.view(image.height, image.width, image_channels)
+    # [height, width, channels] -> [channels, height, width]
+    image_tensor = image_tensor.permute(2, 0, 1).contiguous()
 
-    return image_tensor.float().div(255.0).unsqueeze()
+    return image_tensor.float().div(255.0).unsqueeze(dim=0)
 
 
 class ImageToImageModelCleanupServer(ImageToImageModelServer, ABC):
@@ -87,7 +88,7 @@ class ImageToImageModelCleanupServer(ImageToImageModelServer, ABC):
                     continue
 
                 image = Image.open(io.BytesIO(image_data))
-                image_tensor = image_to_tensor(image)
+                image_tensor = pil_image_to_tensor(image)
 
                 # Any image pre-processing
 
