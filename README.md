@@ -89,15 +89,15 @@ servers:
 ### TODOs:
 
 X-Large:
-- Support continuous batching (per-iteration)
+- Support continuous batching (per next-token iteration)
 
 Core:
 - Wait model_server before REST API available
 - Support api_server->models router (for multi-model support)
 
 Models
-- Support heterogeneous sampling on same TextGen batch (beam and sample)
-- Refactor wdnet and move to models
+- Support heterogeneous sampling on same TextGen batch (e.g. beam and sample)
+- Refactor wdnet and move it to models
 - Add whisper model support
 
 Performance:
@@ -117,7 +117,6 @@ Stability & QoL:
 - sudo apt-get install -y nvidia-container-toolkit
 - docker run --gpus all -e HF_ACCESS_TOKEN=TOKEN vfastml.apps.openai.model:v1
 
-
 #### Torch profiler not working on WSL2?
 
 - nVidia Control Panel &rarr; Developer &rarr; Manage GPU Performance Counters &rarr;
@@ -132,3 +131,24 @@ Allow Access To All users
 - ssh-keygen -t ed25519 -C your@email.com -f any_ed25519
   - eval $(ssh-agent -s) ssh-add ~/.ssh/any_ed25519
   - add to ~/.bashrc or ~/.zshrc: "IdentityFile ~/.ssh/any_ed25519"
+
+### Performance Notes:
+
+LLMs Engines That Beat vLLM:
+- https://deci.ai/lp/infery-llm/ (claim 11x vLLM, Too Good To be True?)
+- https://mkone.ai/ (claim 3.7x vLLM)
+- https://www.together.ai/blog/together-inference-engine-v1 (claim 3.0x vLLM)
+- https://github.com/microsoft/DeepSpeed/tree/master/blogs/deepspeed-fastgen (claim 2.5x vLLM)
+- https://www.modular.com/max/engine (no vLLM comparison)
+
+What is VFastML missing for a 3x speed-up?
+- Continuous Batching (up ~2x speed-up)
+- Medusa: Multiple LM Heads (up ~1.5x speed-up)
+<br />https://github.com/FasterDecoding/Medusa
+- Flash Decoding: Better on Large Seqs (up ~1.5x speed-up)
+<br />https://www.together.ai/blog/flash-decoding-for-long-context-inference
+- AWQ Quantization (~1.0x perf, ~0.5x memory)
+<br />AWQ slower than bf16? 2x KV-Cache should provide a batch speed-up
+
+What I've tested:
+- Flash Attention: ~2x speed-up over SDPA on RTX 3090 24GB
