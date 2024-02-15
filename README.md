@@ -88,13 +88,47 @@ servers:
 
 ### TODOs:
 
+X-Large:
 - Support continuous batching (per-iteration)
-- For LLM, huggingface uses flash-attn v2
 
-### Minors:
-
+Core:
 - Wait model_server before REST API available
-- Support api_server to N-models router (for multi-engine support)
+- Support api_server->models router (for multi-model support)
 
-### Tids and Bits:
-sudo apt-get install -y nvidia-container-toolkit
+Models
+- Support heterogeneous sampling on same TextGen batch (beam and sample)
+- Refactor wdnet and move to models
+- Add whisper model support
+
+Performance:
+- Profile and calculate optimal batch size on start
+- Implement benchmark for TGI and HF
+  - Actually count generated tokens (don't trust it respect forward_params)
+
+Stability & QoL:
+- Add and improve input validation
+- Refactor TextGeneration classes (internals and openai are a bit mixed)
+- Expose classes through main package (avoid random imports)
+
+
+### Frequent Issues:
+
+#### Docker GPU build / run Issues?
+- sudo apt-get install -y nvidia-container-toolkit
+- docker run --gpus all -e HF_ACCESS_TOKEN=TOKEN vfastml.apps.openai.model:v1
+
+
+#### Torch profiler not working on WSL2?
+
+- nVidia Control Panel &rarr; Developer &rarr; Manage GPU Performance Counters &rarr;
+Allow Access To All users
+- Windows Settings &rarr; System &rarr; For Developers &rarr; Developer Mode ON
+
+#### Incorrect CUDA version? (We are on cu118)
+- pip install --upgrade torch==2.0.1+cu118 -f https://download.pytorch.org/whl/torch_stable.html
+
+#### How create ssh key pair?
+
+- ssh-keygen -t ed25519 -C your@email.com -f any_ed25519
+  - eval $(ssh-agent -s) ssh-add ~/.ssh/any_ed25519
+  - add to ~/.bashrc or ~/.zshrc: "IdentityFile ~/.ssh/any_ed25519"
