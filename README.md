@@ -141,14 +141,14 @@ LLMs Engines That Beat vLLM:
 - https://github.com/microsoft/DeepSpeed/tree/master/blogs/deepspeed-fastgen (claim 2.5x vLLM)
 - https://www.modular.com/max/engine (no vLLM comparison)
 
-What is VFastML missing for a 3x speed-up?
-- Continuous Batching (up ~2x speed-up)
+What is VFastML missing for a 5x speed-up?
+- Continuous Batching (up ~3x speed-up)
 - Medusa: Multiple LM Heads (up ~1.5x speed-up)
 <br />https://github.com/FasterDecoding/Medusa
 - Flash Decoding: Better on Large Seqs (up ~1.5x speed-up)
 <br />https://www.together.ai/blog/flash-decoding-for-long-context-inference
-- AWQ Quantization (~1.0x perf, ~0.5x memory)
-<br />AWQ slower than bf16? 2x KV-Cache should provide a batch speed-up
+- AWQ Quantization (1.0~1.5x perf, ~0.5x memory)
+<br />AWQ slower than bf16? Larger KV-Cache should provide a speed-up
 
 What I've tested:
 - Flash Attention: ~2x speed-up over SDPA on RTX 3090 24GB
